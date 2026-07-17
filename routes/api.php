@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\TourPackageController as AdminTourPackageController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\TourPackageController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +15,9 @@ Route::prefix('v1')->group(function (): void {
         ]);
     });
 
+    Route::get('/tour-packages', [TourPackageController::class, 'index']);
+    Route::get('/tour-packages/{tourPackage}', [TourPackageController::class, 'show']);
+
     Route::prefix('auth')->group(function (): void {
         Route::post('/login', [AuthController::class, 'login']);
 
@@ -21,4 +26,10 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/logout', [AuthController::class, 'logout']);
         });
     });
+
+    Route::prefix('admin')
+        ->middleware(['auth:sanctum', 'role:admin'])
+        ->group(function (): void {
+            Route::apiResource('tour-packages', AdminTourPackageController::class);
+        });
 });
