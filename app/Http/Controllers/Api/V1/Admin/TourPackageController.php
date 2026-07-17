@@ -22,7 +22,10 @@ class TourPackageController extends Controller
     public function store(StoreTourPackageRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $data['slug'] = $data['slug'] ?: Str::slug($data['name']).'-'.Str::lower(Str::random(5));
+        $data['slug'] = filled($data['slug'] ?? null)
+            ? $data['slug']
+            : Str::slug($data['name']).'-'.Str::lower(Str::random(5));
+
         $tourPackage = TourPackage::create($data);
 
         return response()->json([
@@ -40,9 +43,11 @@ class TourPackageController extends Controller
     public function update(UpdateTourPackageRequest $request, TourPackage $tourPackage): JsonResponse
     {
         $data = $request->validated();
+
         if (array_key_exists('slug', $data) && blank($data['slug'])) {
             $data['slug'] = Str::slug($data['name'] ?? $tourPackage->name).'-'.Str::lower(Str::random(5));
         }
+
         $tourPackage->update($data);
 
         return response()->json([
