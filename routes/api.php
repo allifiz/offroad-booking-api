@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Admin\TourPackageController as AdminTourPackageController;
 use App\Http\Controllers\Api\V1\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\TourPackageController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,8 @@ Route::prefix('v1')->group(function (): void {
             'timestamp' => now()->toISOString(),
         ]);
     });
+
+    Route::post('/driver/register', [DriverRegistrationController::class, 'store']);
 
     Route::get('/tour-packages', [TourPackageController::class, 'index']);
     Route::get('/tour-packages/{tourPackage}', [TourPackageController::class, 'show']);
