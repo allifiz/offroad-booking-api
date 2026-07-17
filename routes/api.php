@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\TourPackageController as AdminTourPackageController;
+use App\Http\Controllers\Api\V1\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\TourPackageController;
 use Illuminate\Http\JsonResponse;
@@ -31,5 +32,6 @@ Route::prefix('v1')->group(function (): void {
         ->middleware(['auth:sanctum', 'role:admin'])
         ->group(function (): void {
             Route::apiResource('tour-packages', AdminTourPackageController::class);
+            Route::apiResource('vehicles', AdminVehicleController::class);
         });
 });
