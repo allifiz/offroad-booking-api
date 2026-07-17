@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\Enums\DriverStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DriverProfile extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'status',
