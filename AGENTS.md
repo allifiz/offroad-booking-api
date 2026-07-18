@@ -37,6 +37,130 @@
 12. Never expose or repeat real access tokens found in user messages. Recommend revoking exposed tokens.
 13. Keep responses in Indonesian with a casual but technically clear tone.
 
+## Required response structure
+
+This section is mandatory for every agent that completes a backend change. Do not replace the headings, change their order, or omit a section just because it is empty.
+
+### 1. Changes
+
+Explain exactly what was changed, including:
+
+- files or backend areas affected
+- business rules added or changed
+- validation and authorization behavior
+- migrations, seeders, tests, or documentation added
+- commit SHA when the change was pushed to GitHub
+- any limitation, assumption, or test that could not be executed
+
+Do not merely say “done”. Describe the actual behavior now implemented.
+
+### 2. Endpoint changes
+
+List every new, changed, or removed endpoint using method and path, for example:
+
+```text
+POST  /api/v1/customer/bookings
+PATCH /api/v1/admin/bookings/{booking}/status
+```
+
+Also state:
+
+- required role
+- whether Sanctum authentication is required
+- important request fields
+- important state or business-rule requirements
+
+When no endpoint changed, explicitly write that there is no endpoint change.
+
+### 3. Cara pull changes
+
+Provide ready-to-run PowerShell commands for the user's Windows environment. Start with:
+
+```powershell
+cd C:\Projects\offroad-booking-api
+git switch main
+git pull origin main
+```
+
+Then include only relevant commands, such as:
+
+```powershell
+composer install
+php artisan optimize:clear
+php artisan migrate
+php artisan db:seed
+php artisan storage:link
+php artisan route:list --path=api/v1
+php artisan test
+php artisan serve
+```
+
+Rules:
+
+- mention clearly when there is no migration
+- include migration or seeder commands when required
+- include `storage:link` for upload/public-storage changes when relevant
+- include route inspection for new routes
+- include test commands
+- never instruct the user to run destructive commands such as `migrate:fresh` unless explicitly necessary and clearly warned
+
+### 4. cURL Postman
+
+Provide complete cURL commands that can be pasted into:
+
+```text
+Postman → Import → Raw text
+```
+
+Every cURL must include:
+
+- complete local URL, normally `http://127.0.0.1:8000`
+- `Accept: application/json`
+- `Content-Type: application/json` when sending JSON
+- `Authorization: Bearer {{token_variable}}` for protected endpoints
+- complete request body
+
+Use placeholders or Postman variables such as:
+
+```text
+{{admin_token}}
+{{customer_token}}
+{{driver_token}}
+```
+
+Never repeat a real token supplied by the user. When a real token appears in chat, tell the user to revoke it and use a replacement.
+
+Include cURL for:
+
+- the normal success flow
+- important validation failures
+- authorization or ownership failures when relevant
+- regression cases for the bug that was just fixed
+
+Use actual IDs only when they are clearly described as local examples. Never hardcode local IDs into application code.
+
+### 5. Expected result cURL
+
+For every important cURL, show:
+
+- expected HTTP status, for example `HTTP 201 Created`
+- representative JSON response
+- the key database or state change that should occur
+
+Examples must match the actual response structure implemented by the controller. Do not fabricate fields that the API does not return.
+
+For validation failures, show HTTP `422` and the expected `errors` object. For authentication failures, show HTTP `401`. For inaccessible resources hidden by ownership rules, show HTTP `404` when that is the implemented behavior.
+
+### Additional answer behavior
+
+- Be direct and practical; the user is actively testing through Postman and phpMyAdmin.
+- When a bug is reported, first confirm the intended business rule, patch it, and provide a regression cURL.
+- When the user's database state prevents testing, provide safe SQL to inspect or reset only the necessary records.
+- Prefer transactions for multi-table reset queries.
+- Distinguish `users.id`, `driver_profiles.id`, `vehicles.id`, `bookings.id`, and `driver_assignments.id` clearly.
+- Never claim automated tests passed when they were not executed.
+- After documenting a backend change, state the best next project priority only when useful; do not bury the required five response sections.
+
 ## Current product decisions
 
 - Actors: admin, driver, customer.
@@ -163,6 +287,7 @@ Always query current data instead of assuming these IDs still exist.
 - `f47a28453ce71973a373770c1ad97cc00bbdb975` — admin booking and assignment routes/features.
 - `3a2bebef714d71c249e0886ba2c69bf6a1b4549c` — require accepted assignment for ongoing/completed.
 - `57bdb505a8c95a9cd8b019345c17a65ad3838d11` — require paid booking before assignment and trip progress.
+- `8917bbfa453cfe6a53028c31fe16db0acb88f170` — add project agent handoff guide.
 
 Check `git log` because newer commits may exist.
 
