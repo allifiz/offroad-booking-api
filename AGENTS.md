@@ -10,71 +10,100 @@
 - Admin and customer clients: Laravel web
 - Driver client: Flutter native
 - Main working branch: `main`
+- Local backend path: `C:\Projects\offroad-booking-api`
 
-## Agent operating rules
+## Mandatory agent workflow
 
-1. Read this file before changing backend behavior.
-2. Apply requested backend changes directly to `main` unless the user explicitly asks for a branch or pull request.
-3. Inspect existing models, enums, migrations, controllers, routes, and tests before adding new structures.
-4. Preserve existing enum values and database relationships unless a migration is explicitly needed.
-5. Do not invent company-owned vehicle flows. The current product decision is that operational vehicles belong to drivers.
-6. Use `driver_id` to mean the driver's `users.id`. A vehicle belongs to the driver through `vehicles.driver_profile_id -> driver_profiles.id -> driver_profiles.user_id`.
-7. After backend changes, always provide the response in this exact order:
-   - **Changes**
-   - **Endpoint changes**
-   - **Cara pull changes**
-   - **cURL Postman**
-   - **Expected result cURL**
-8. cURL examples must be importable through Postman → Import → Raw text.
-9. Auth examples must use:
+1. Read this file before inspecting or changing backend behavior.
+2. Inspect the current repository state, models, enums, migrations, controllers, routes, and tests before implementing changes.
+3. Apply requested backend changes directly to `main`, unless the user explicitly requests a branch or pull request.
+4. Preserve existing enum values and relationships unless a migration is genuinely required.
+5. Do not invent company-owned vehicle flows. Operational vehicles belong to drivers.
+6. `driver_id` means `users.id`. Vehicle ownership follows:
 
    ```text
-   Authorization: Bearer YOUR_TOKEN
+   vehicles.driver_profile_id
+   → driver_profiles.id
+   → driver_profiles.user_id
+   → users.id
    ```
 
-10. Pull instructions must include relevant commands such as `git pull`, `composer install`, `php artisan optimize:clear`, migrations, seeders, storage linking, route inspection, and tests when applicable.
-11. Expected results must include HTTP status and representative JSON.
-12. Never expose or repeat real access tokens found in user messages. Recommend revoking exposed tokens.
-13. Keep responses in Indonesian with a casual but technically clear tone.
+7. Never expose or repeat a real access token supplied by the user. Recommend revoking an exposed token.
+8. Keep responses in Indonesian with a casual but technically clear tone.
+9. Never claim tests passed when they were not executed.
+
+## Mandatory AGENTS.md maintenance
+
+`AGENTS.md` is the canonical handoff and latest-progress document for this repository.
+
+Every backend or project change must also update this file in the same work session. A change is not considered fully completed until `AGENTS.md` reflects the new state.
+
+After every change, update all relevant sections, including:
+
+- implemented progress
+- newly added or changed endpoints
+- business rules and state guards
+- migrations, seeders, uploads, storage, or configuration changes
+- bug fixes and regression protections
+- latest relevant commit SHA
+- known limitations or tests that were not executed
+- next-progress list
+- recommended immediate priority
+
+Rules:
+
+- Remove items from the pending roadmap when they are completed.
+- Move completed scope into **Implemented progress**.
+- Reorder priorities when the project state changes.
+- Record important product decisions that future agents must preserve.
+- Do not turn this file into a raw changelog; keep it as an accurate current-state guide.
+- Documentation-only changes to this file do not require recursively adding another history entry.
 
 ## Required response structure
 
-This section is mandatory for every agent that completes a backend change. Do not replace the headings, change their order, or omit a section just because it is empty.
+After every backend change, respond using these headings in this exact order. Do not rename, reorder, or omit them:
 
-### 1. Changes
+1. **Changes**
+2. **Endpoint changes**
+3. **Cara pull changes**
+4. **cURL Postman**
+5. **Expected result cURL**
 
-Explain exactly what was changed, including:
+### Changes
 
-- files or backend areas affected
-- business rules added or changed
-- validation and authorization behavior
-- migrations, seeders, tests, or documentation added
-- commit SHA when the change was pushed to GitHub
-- any limitation, assumption, or test that could not be executed
+Include:
 
-Do not merely say “done”. Describe the actual behavior now implemented.
+- actual behavior implemented
+- important files or backend areas affected
+- validation, authorization, and business rules
+- migration, seeder, storage, test, or documentation changes
+- commit SHA
+- limitations and tests not executed
+- confirmation that `AGENTS.md` was updated when applicable
 
-### 2. Endpoint changes
+Do not merely say “done”.
 
-List every new, changed, or removed endpoint using method and path, for example:
+### Endpoint changes
+
+List every new, modified, or removed endpoint using method and path:
 
 ```text
-POST  /api/v1/customer/bookings
-PATCH /api/v1/admin/bookings/{booking}/status
+POST  /api/v1/example
+PATCH /api/v1/example/{id}
 ```
 
 Also state:
 
 - required role
-- whether Sanctum authentication is required
+- Sanctum requirement
 - important request fields
-- important state or business-rule requirements
+- important state requirements
 
-When no endpoint changed, explicitly write that there is no endpoint change.
+When no endpoint changed, explicitly say so.
 
-### 3. Cara pull changes
+### Cara pull changes
 
-Provide ready-to-run PowerShell commands for the user's Windows environment. Start with:
+Use ready-to-run PowerShell commands for Windows, beginning with:
 
 ```powershell
 cd C:\Projects\offroad-booking-api
@@ -82,7 +111,7 @@ git switch main
 git pull origin main
 ```
 
-Then include only relevant commands, such as:
+Then add only commands that are relevant:
 
 ```powershell
 composer install
@@ -95,178 +124,135 @@ php artisan test
 php artisan serve
 ```
 
-Rules:
+Clearly state when there is no migration. Never suggest destructive commands such as `migrate:fresh` without explicit necessity and a warning.
 
-- mention clearly when there is no migration
-- include migration or seeder commands when required
-- include `storage:link` for upload/public-storage changes when relevant
-- include route inspection for new routes
-- include test commands
-- never instruct the user to run destructive commands such as `migrate:fresh` unless explicitly necessary and clearly warned
+### cURL Postman
 
-### 4. cURL Postman
-
-Provide complete cURL commands that can be pasted into:
+All cURL examples must be importable through:
 
 ```text
 Postman → Import → Raw text
 ```
 
-Every cURL must include:
+Requirements:
 
 - complete local URL, normally `http://127.0.0.1:8000`
 - `Accept: application/json`
-- `Content-Type: application/json` when sending JSON
-- `Authorization: Bearer {{token_variable}}` for protected endpoints
-- complete request body
+- `Content-Type: application/json` for JSON bodies
+- protected endpoints use `Authorization: Bearer {{admin_token}}`, `{{customer_token}}`, or `{{driver_token}}`
+- complete body
+- normal success flow
+- important validation and authorization failures
+- regression cURL for a bug that was fixed
 
-Use placeholders or Postman variables such as:
+Never reuse a real token from chat.
 
-```text
-{{admin_token}}
-{{customer_token}}
-{{driver_token}}
-```
+### Expected result cURL
 
-Never repeat a real token supplied by the user. When a real token appears in chat, tell the user to revoke it and use a replacement.
+For every important request, provide:
 
-Include cURL for:
+- expected HTTP status
+- representative JSON matching the implemented controller
+- key state/database change
 
-- the normal success flow
-- important validation failures
-- authorization or ownership failures when relevant
-- regression cases for the bug that was just fixed
+Use expected status codes consistently:
 
-Use actual IDs only when they are clearly described as local examples. Never hardcode local IDs into application code.
-
-### 5. Expected result cURL
-
-For every important cURL, show:
-
-- expected HTTP status, for example `HTTP 201 Created`
-- representative JSON response
-- the key database or state change that should occur
-
-Examples must match the actual response structure implemented by the controller. Do not fabricate fields that the API does not return.
-
-For validation failures, show HTTP `422` and the expected `errors` object. For authentication failures, show HTTP `401`. For inaccessible resources hidden by ownership rules, show HTTP `404` when that is the implemented behavior.
-
-### Additional answer behavior
-
-- Be direct and practical; the user is actively testing through Postman and phpMyAdmin.
-- When a bug is reported, first confirm the intended business rule, patch it, and provide a regression cURL.
-- When the user's database state prevents testing, provide safe SQL to inspect or reset only the necessary records.
-- Prefer transactions for multi-table reset queries.
-- Distinguish `users.id`, `driver_profiles.id`, `vehicles.id`, `bookings.id`, and `driver_assignments.id` clearly.
-- Never claim automated tests passed when they were not executed.
-- After documenting a backend change, state the best next project priority only when useful; do not bury the required five response sections.
+- `200` successful read/update
+- `201` successful creation
+- `401` unauthenticated
+- `403` role/authorization denial when implemented that way
+- `404` inaccessible or missing ownership-scoped resource
+- `422` validation or illegal state transition
 
 ## Current product decisions
 
 - Actors: admin, driver, customer.
-- Driver registration and vehicle registration begin as `pending` and unavailable.
+- Driver and vehicle registration start as `pending` and unavailable.
 - Admin verifies drivers and driver-owned vehicles.
-- Vehicles used operationally are driver-owned; company vehicles are not part of the intended flow.
-- Assignment is offered by admin and must be accepted or rejected by the driver.
-- A booking cannot be assigned before payment is complete.
-- A booking cannot start or complete before payment is complete and a driver assignment is accepted.
-- Driver points will use a ledger.
-- Withdrawal will hold balance while pending.
-- Participant distribution per vehicle remains flexible and is decided by admin.
-- Travel groups can originate from a driver or from the website.
+- Operational vehicles are driver-owned; company vehicles are outside the intended flow.
+- Admin offers assignments; drivers accept or reject them.
+- Booking assignment requires payment to be complete.
+- Booking cannot start or complete unless payment is `paid` and an assignment is `accepted`.
+- Participant allocation per vehicle is flexible and controlled by admin.
+- Travel groups can originate from a driver or the website.
+- Driver points use a ledger.
+- Withdrawal holds balance while pending.
 
 ## Implemented progress
 
-### Foundation
+### Foundation and authentication
 
-- Laravel 13 project initialized.
-- MySQL/MariaDB configured.
-- API health endpoint available.
-- Laravel Sanctum authentication implemented.
-- Login, current user, and logout endpoints implemented.
-- Role middleware implemented for admin, driver, and customer access.
+- Laravel 13 and MySQL/MariaDB initialized.
+- API health endpoint implemented.
+- Sanctum login, current-user, and logout endpoints implemented.
+- Role middleware implemented for admin, driver, and customer.
 
 ### Master data
 
-- Public tour-package listing and detail endpoints implemented.
-- Admin tour-package CRUD implemented.
-- Admin vehicle CRUD implemented.
+- Public tour-package listing and detail.
+- Admin tour-package CRUD.
+- Admin vehicle CRUD.
 
 ### Driver registration and verification
 
-- Driver profile structure implemented.
-- Driver document structure implemented.
-- Driver vehicle structure implemented.
-- Driver vehicle document and photo structures implemented.
-- Multipart driver registration implemented.
-- New driver defaults to `verification_status = pending` and `status = unavailable`.
-- New driver vehicle defaults to `verification_status = pending` and `status = unavailable`.
-- Admin driver list, detail, approve, and reject endpoints implemented.
-- Admin driver-vehicle approve and reject endpoint implemented.
-- Rejection reason is required when rejecting.
+- Driver profile, documents, vehicles, vehicle documents, and photos.
+- Multipart driver registration.
+- New drivers and vehicles default to pending/unavailable.
+- Admin driver list/detail/approve/reject.
+- Admin driver-vehicle approve/reject.
+- Rejection reason required when rejected.
 
 ### Customer and booking
 
-- Customer registration with automatic Sanctum token implemented.
-- Customer profile show and update implemented.
-- Customer booking creation implemented.
-- Booking participants implemented.
-- Booking code generation implemented.
-- Participant count and total price are calculated server-side.
-- Active-package validation implemented.
-- Future-date validation implemented.
-- Minimum and maximum participant validation implemented.
-- Only one group leader is allowed; the first participant becomes leader when none is selected.
-- Customer booking history, filtering, and detail implemented.
-- Customers can only access their own bookings.
+- Customer registration with Sanctum token.
+- Customer profile show/update.
+- Customer booking creation and participants.
+- Server-side booking code, participant count, and total calculation.
+- Active package, future date, min/max participant, and single-leader validation.
+- First participant becomes leader when none is selected.
+- Customer booking history/filter/detail.
+- Customer booking ownership isolation.
 
 ### Admin booking operations
 
-- Admin booking list and detail implemented.
-- Filters implemented for booking status, payment status, tour date, booking code, and customer identity.
-- Admin booking status update implemented.
-- Final booking states (`completed`, `cancelled`) cannot be changed.
-- Cancelling a booking cancels active offered or accepted assignments.
+- Booking list/detail with filters for status, payment status, tour date, booking code, and customer.
+- Admin booking status update.
+- Final states `completed` and `cancelled` cannot be changed.
+- Cancelling a booking cancels offered or accepted assignments.
 
 ### Driver assignment
 
-- Admin can assign a driver and driver-owned vehicle to a booking.
-- Driver must be approved and available.
-- Vehicle must be approved, available, and owned by the selected driver.
-- Driver and vehicle schedule conflicts are checked on the booking tour date.
-- Cancelled or completed bookings cannot receive assignments.
-- Assignment begins with status `offered`.
+- Admin assigns approved/available driver and approved/available driver-owned vehicle.
+- Driver and vehicle conflicts are checked for the same tour date.
+- Cancelled/completed bookings cannot receive assignments.
+- Assignment starts as `offered`.
 - Admin can cancel an assignment.
-- Assignment states are `offered`, `accepted`, `rejected`, and `cancelled`.
+- Assignment statuses: `offered`, `accepted`, `rejected`, `cancelled`.
 
-### Patched booking guards
+### Mandatory booking guards already patched
 
-The following guards are already implemented and must not be removed:
+Do not remove these rules:
 
-1. Driver assignment creation requires `booking.payment_status = paid`.
-2. Booking status `ongoing` requires:
-   - `payment_status = paid`
-   - at least one assignment with `status = accepted`
-3. Booking status `completed` requires:
-   - `payment_status = paid`
-   - at least one assignment with `status = accepted`
-4. An `offered`, `rejected`, or `cancelled` assignment does not authorize `ongoing` or `completed`.
+1. Assignment creation requires `booking.payment_status = paid`.
+2. `ongoing` requires payment `paid` and at least one accepted assignment.
+3. `completed` requires payment `paid` and at least one accepted assignment.
+4. Offered, rejected, or cancelled assignments do not authorize ongoing/completed.
 
-Expected normal booking flow:
+Current expected flow:
 
 ```text
 pending + unpaid
 → payment paid
 → admin assigns driver and vehicle
 → assignment offered
-→ driver accepts assignment
-→ booking confirmed/ongoing
+→ driver accepts
+→ booking ongoing
 → booking completed
 ```
 
-## Known local test data from the latest working session
+## Known local test data
 
-This data is only a local example and must not be hardcoded:
+Local examples only; never hardcode these IDs:
 
 - Driver profile ID: `1`
 - Driver user ID: `12`
@@ -278,68 +264,59 @@ This data is only a local example and must not be hardcoded:
 - Vehicle status: `available`
 - Vehicle verification: `approved`
 
-Always query current data instead of assuming these IDs still exist.
+Always query current database data before testing.
 
 ## Latest relevant commits
 
-- `709b9e141b4ca60be2fcc565bbd44a04fa9610e3` — merged admin driver and vehicle verification work.
+- `709b9e141b4ca60be2fcc565bbd44a04fa9610e3` — admin driver and vehicle verification.
 - `0db70c9712db9d43bf103bb8835ffff7d24852b8` — customer booking leader edge-case fix.
 - `f47a28453ce71973a373770c1ad97cc00bbdb975` — admin booking and assignment routes/features.
-- `3a2bebef714d71c249e0886ba2c69bf6a1b4549c` — require accepted assignment for ongoing/completed.
-- `57bdb505a8c95a9cd8b019345c17a65ad3838d11` — require paid booking before assignment and trip progress.
-- `8917bbfa453cfe6a53028c31fe16db0acb88f170` — add project agent handoff guide.
+- `3a2bebef714d71c249e0886ba2c69bf6a1b4549c` — accepted assignment required for ongoing/completed.
+- `57bdb505a8c95a9cd8b019345c17a65ad3838d11` — paid booking required before assignment and trip progress.
+- `8917bbfa453cfe6a53028c31fe16db0acb88f170` — initial project handoff guide.
+- `e9d1cc61dea6e1bf0c62db0f2878ca4b4de5a68f` — required response structure clarified.
 
-Check `git log` because newer commits may exist.
+Always check `git log`; newer commits may exist. Add the latest functional commit here whenever progress changes.
 
 ## Next progress list
 
 ### Priority 1 — Payment workflow
 
-Implement the real payment flow so testing no longer requires manual SQL updates.
+Highest priority because payment guards exist but payment still requires manual SQL.
 
 Recommended scope:
 
-- customer submits payment or uploads transfer proof
-- payment record/invoice structure if not already sufficient
-- admin lists pending payment verification
-- admin approves or rejects payment
-- approved payment updates `bookings.payment_status` to `paid`
-- rejected payment records a reason and leaves the booking unpaid or failed according to the agreed flow
-- prevent illegal payment transitions
-- expose payment history/status to customer
-- add feature tests for assignment-before-payment rejection
-
-This is the highest priority because assignment now depends on `payment_status = paid`, but there is no proper API yet to complete payment.
+- customer submits payment/upload proof
+- payment or invoice record
+- customer payment status/history
+- admin pending-payment list/detail
+- admin approve/reject with rejection reason
+- approval updates booking payment status to `paid`
+- legal payment-state transitions
+- tests for assignment-before-payment rejection
 
 ### Priority 2 — Driver assignment response API
 
-Implement driver-side endpoints:
-
-- list offered assignments for authenticated driver
-- assignment detail
+- driver assignment list/detail
 - accept assignment
-- reject assignment with required rejection reason
-- ensure only the assigned driver can respond
-- prevent responding twice
+- reject with required reason
+- only assigned driver may respond
+- prevent double responses
 - set `responded_at`
-- define availability behavior after accept/reject
-- add tests for booking progression with offered versus accepted assignment
-
-This removes the current need to change assignment status through SQL.
+- define availability behavior after acceptance/rejection
+- tests for offered versus accepted booking progression
 
 ### Priority 3 — Driver dashboard/API
 
-- show driver profile and verification status
+- profile and verification status
 - update allowed profile fields
-- show rejected documents and reasons
+- rejected document status/reason
 - re-upload rejected documents
-- toggle availability with business-rule validation
-- list and manage driver-owned vehicles
-- show vehicle verification status
+- availability toggle with rules
+- list/manage driver-owned vehicles
+- vehicle verification status
 
-### Priority 4 — Booking state machine hardening
-
-Add explicit allowed transitions instead of accepting any non-final status change.
+### Priority 4 — Booking state-machine hardening
 
 Recommended transitions:
 
@@ -351,84 +328,77 @@ completed → final
 cancelled → final
 ```
 
-Consider whether `confirmed` should also require payment `paid`. The current hard guard is mandatory for assignment, ongoing, and completed.
-
-Also add protections such as:
-
-- cannot complete directly from pending
-- cannot move ongoing back to pending
-- cannot cancel after completed
-- optionally require tour date conditions before ongoing/completed
+Add protection against direct pending → completed, backward transitions, and invalid cancellation.
 
 ### Priority 5 — Travel groups and participant allocation
 
-- groups created from driver and website sources
+- driver-origin and website-origin groups
 - leader/member management
-- attach bookings or participants to groups
-- flexible admin allocation of participants to vehicles
-- enforce vehicle capacities
+- attach bookings/participants
+- flexible allocation to vehicles
+- capacity enforcement
 
 ### Priority 6 — Points and withdrawal
 
 - driver point ledger
-- award points after completed trips
+- award after completed trips
 - available and held balances
 - withdrawal request
-- admin approve/reject/process
-- release held points on rejection
-- deduct held points on completion
+- admin approval/rejection/processing
+- release or deduct held balance
 
 ### Priority 7 — Admin operations and production hardening
 
 - customer management
-- dashboard statistics
-- reports
+- dashboard and reports
 - notifications and queues
 - audit logs
-- policies/authorization refinement
+- policies and authorization refinement
 - rate limiting
 - API documentation
 - comprehensive automated tests
-- backups and deployment
-- Flutter driver integration
-- Laravel admin/customer frontend integration
+- backup and deployment
+- Flutter and Laravel frontend integration
 
 ## Recommended immediate continuation
 
-Continue with **Payment workflow first**, then **Driver assignment response API**.
+Continue with:
 
-Reasoning:
+```text
+Payment workflow
+→ Driver assignment response API
+→ Driver dashboard
+→ Booking state-machine hardening
+```
 
-1. The backend already blocks assignment before payment, but there is no legitimate endpoint to mark payment as paid.
-2. The backend already blocks trip progress before assignment acceptance, but there is no driver endpoint to accept or reject.
-3. Completing these two flows creates a fully testable end-to-end path without manual SQL:
+This creates an end-to-end flow without manual SQL:
 
 ```text
 customer creates booking
-→ customer pays/uploads proof
+→ customer submits payment
 → admin verifies payment
 → admin assigns driver and vehicle
 → driver accepts
-→ admin/driver progresses trip
-→ booking completes
+→ trip starts
+→ trip completes
 ```
 
-## Verification expectations for future changes
+## Verification expectations
 
-At minimum, future agents should test or provide tests for:
+Future agents should test or provide tests for:
 
 - authentication and role restrictions
-- ownership restrictions
-- validation failure responses
+- resource ownership
+- validation failures
 - payment-required assignment guard
 - accepted-assignment-required trip guard
 - final-state protection
-- schedule conflict checks
+- driver/vehicle schedule conflicts
 - customer booking isolation
-- repeated accept/reject attempts
-- invalid state transitions
+- repeated assignment responses
+- invalid booking/payment transitions
 
-When runtime access is unavailable, clearly state that tests were not executed and instruct the user to run:
+When runtime access is unavailable, state that tests were not executed and instruct the user to run:
 
 ```powershell
 php artisan optimize:clear
