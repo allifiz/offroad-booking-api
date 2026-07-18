@@ -73,7 +73,7 @@ class BookingController extends Controller
             ]);
         }
 
-        $booking = DB::transaction(function () use ($request, $validated, $tourPackage, $participantCount): Booking {
+        $booking = DB::transaction(function () use ($request, $validated, $tourPackage, $participantCount, $leaderCount): Booking {
             $booking = Booking::create([
                 'booking_code' => $this->generateBookingCode(),
                 'customer_id' => $request->user()->id,
@@ -91,7 +91,7 @@ class BookingController extends Controller
                     'user_id' => $index === 0 ? $request->user()->id : null,
                     'name' => $participant['name'],
                     'phone' => $participant['phone'] ?? null,
-                    'is_group_leader' => $participant['is_group_leader'] ?? $index === 0,
+                    'is_group_leader' => $participant['is_group_leader'] ?? ($leaderCount === 0 && $index === 0),
                 ]);
             }
 
