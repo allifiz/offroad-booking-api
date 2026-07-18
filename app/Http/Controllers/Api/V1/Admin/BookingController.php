@@ -76,6 +76,16 @@ class BookingController extends Controller
         }
 
         if (in_array($nextStatus, [BookingStatus::ONGOING, BookingStatus::COMPLETED], true)) {
+            if ($booking->payment_status !== PaymentStatus::PAID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran booking belum selesai.',
+                    'errors' => [
+                        'payment_status' => ['Booking harus berstatus paid sebelum dapat dimulai atau diselesaikan.'],
+                    ],
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             $hasAcceptedAssignment = $booking->driverAssignments()
                 ->where('status', DriverAssignmentStatus::ACCEPTED->value)
                 ->exists();
