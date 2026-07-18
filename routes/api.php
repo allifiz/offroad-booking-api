@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Api\V1\Admin\DriverAssignmentController;
 use App\Http\Controllers\Api\V1\Admin\DriverVehicleVerificationController;
 use App\Http\Controllers\Api\V1\Admin\DriverVerificationController;
 use App\Http\Controllers\Api\V1\Admin\TourPackageController as AdminTourPackageController;
@@ -58,5 +60,11 @@ Route::prefix('v1')->group(function (): void {
             Route::get('drivers/{driverProfile}', [DriverVerificationController::class, 'show']);
             Route::patch('drivers/{driverProfile}/verification', [DriverVerificationController::class, 'update']);
             Route::patch('driver-vehicles/{vehicle}/verification', [DriverVehicleVerificationController::class, 'update']);
+
+            Route::get('bookings', [AdminBookingController::class, 'index']);
+            Route::get('bookings/{booking}', [AdminBookingController::class, 'show']);
+            Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus']);
+            Route::post('bookings/{booking}/driver-assignments', [DriverAssignmentController::class, 'store']);
+            Route::patch('bookings/{booking}/driver-assignments/{driverAssignment}/cancel', [DriverAssignmentController::class, 'cancel']);
         });
 });
