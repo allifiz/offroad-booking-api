@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\BookingStatus;
+use App\Enums\DriverAssignmentStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
@@ -74,13 +75,29 @@ class BookingController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        if (in_array($nextStatus, [BookingStatus::ONGOING, BookingStatus::COMPLETED], true)) {
+            $hasAcceptedAssignment = $booking->driverAssignments()
+                ->where('status', DriverAssignmentStatus::ACCEPTED->value)
+                ->exists();
+
+            if (! $hasAcceptedAssignment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking belum memiliki assignment driver yang diterima.',
+                    'errors' => [
+                        'status' => ['Driver harus menerima assignment sebelum booking dapat dimulai atau diselesaikan.'],
+                    ],
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
         $booking->update(['status' => $nextStatus]);
 
         if ($nextStatus === BookingStatus::CANCELLED) {
             $booking->driverAssignments()
-                ->whereIn('status', ['offered', 'accepted'])
+                ->whereIn('status', [DriverAssignmentStatus::OFFERED->value, DriverAssignmentStatus::ACCEPTED->value])
                 ->update([
-                    'status' => 'cancelled',
+                    'status' => DriverAssignmentStatus::CANCELLED->value,
                     'responded_at' => now(),
                 ]);
         }
