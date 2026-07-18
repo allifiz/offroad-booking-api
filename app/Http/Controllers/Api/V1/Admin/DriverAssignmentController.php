@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\BookingStatus;
 use App\Enums\DriverAssignmentStatus;
 use App\Enums\DriverStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\VehicleStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
@@ -30,6 +31,12 @@ class DriverAssignmentController extends Controller
         if (in_array($booking->status, [BookingStatus::CANCELLED, BookingStatus::COMPLETED], true)) {
             throw ValidationException::withMessages([
                 'booking' => ['Booking yang sudah selesai atau dibatalkan tidak dapat diberi assignment.'],
+            ]);
+        }
+
+        if ($booking->payment_status !== PaymentStatus::PAID) {
+            throw ValidationException::withMessages([
+                'payment_status' => ['Pembayaran booking harus berstatus paid sebelum driver dapat di-assign.'],
             ]);
         }
 
