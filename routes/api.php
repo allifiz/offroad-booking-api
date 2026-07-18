@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\DriverVehicleVerificationController;
+use App\Http\Controllers\Api\V1\Admin\DriverVerificationController;
 use App\Http\Controllers\Api\V1\Admin\TourPackageController as AdminTourPackageController;
 use App\Http\Controllers\Api\V1\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -36,5 +38,10 @@ Route::prefix('v1')->group(function (): void {
         ->group(function (): void {
             Route::apiResource('tour-packages', AdminTourPackageController::class);
             Route::apiResource('vehicles', AdminVehicleController::class);
+
+            Route::get('drivers', [DriverVerificationController::class, 'index']);
+            Route::get('drivers/{driverProfile}', [DriverVerificationController::class, 'show']);
+            Route::patch('drivers/{driverProfile}/verification', [DriverVerificationController::class, 'update']);
+            Route::patch('driver-vehicles/{vehicle}/verification', [DriverVehicleVerificationController::class, 'update']);
         });
 });
