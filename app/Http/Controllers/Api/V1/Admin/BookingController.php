@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\BookingStatus;
 use App\Enums\DriverAssignmentStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\PointLedgerType;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\PointLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
@@ -39,10 +42,7 @@ class BookingController extends Controller
             ->paginate($validated['per_page'] ?? 10)
             ->withQueryString();
 
-        return response()->json([
-            'success' => true,
-            'data' => $bookings,
-        ]);
+        return response()->json(['success' => true, 'data' => $bookings]);
     }
 
     public function show(Booking $booking): JsonResponse
@@ -95,27 +95,68 @@ class BookingController extends Controller
                 ]);
             }
 
-            $hasAcceptedAssignment = $booking->driverAssignments()
-                ->where('status', DriverAssignmentStatus::ACCEPTED->value)
-                ->exists();
-
-            if (! $hasAcceptedAssignment) {
+            if (! $booking->driverAssignments()->where('status', DriverAssignmentStatus::ACCEPTED->value)->exists()) {
                 throw ValidationException::withMessages([
                     'status' => ['Driver harus menerima assignment sebelum booking dapat dimulai atau diselesaikan.'],
                 ]);
             }
         }
 
-        $booking->update(['status' => $nextStatus]);
+        DB::transaction(function () use ($booking, $nextStatus): void {
+            $lockedBooking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
+            $lockedBooking->update(['status' => $nextStatus]);
 
-        if ($nextStatus === BookingStatus::CANCELLED) {
-            $booking->driverAssignments()
-                ->whereIn('status', [DriverAssignmentStatus::OFFERED->value, DriverAssignmentStatus::ACCEPTED->value])
-                ->update([
-                    'status' => DriverAssignmentStatus::CANCELLED->value,
-                    'responded_at' => now(),
-                ]);
-        }
+            if ($nextStatus === BookingStatus::CANCELLED) {
+                $lockedBooking->driverAssignments()
+                    ->whereIn('status', [DriverAssignmentStatus::OFFERED->value, DriverAssignmentStatus::ACCEPTED->value])
+                    ->update([
+                        'status' => DriverAssignmentStatus::CANCELLED->value,
+                        'responded_at' => now(),
+                    ]);
+            }
+
+            if ($nextStatus === BookingStatus::COMPLETED) {
+                $points = config('offroad.points_per_completed_trip');
+                $assignments = $lockedBooking->driverAssignments()
+                    ->where('status', DriverAssignmentStatus::ACCEPTED->value)
+                    ->with('driver.driverProfile')
+                    ->get();
+
+                foreach ($assignments as $assignment) {
+                    $profile = $assignment->driver?->driverProfile;
+                    if (! $profile) {
+                        continue;
+                    }
+
+                    $alreadyAwarded = PointLedger::query()
+                        ->where('driver_profile_id', $profile->id)
+                        ->where('type', PointLedgerType::CREDIT->value)
+                        ->where('reference_type', Booking::class)
+                        ->where('reference_id', $lockedBooking->id)
+                        ->exists();
+
+                    if ($alreadyAwarded) {
+                        continue;
+                    }
+
+                    $lockedProfile = $profile->newQuery()->lockForUpdate()->findOrFail($profile->id);
+                    $lockedProfile->increment('available_points', $points);
+                    $lockedProfile->refresh();
+
+                    PointLedger::query()->create([
+                        'driver_profile_id' => $lockedProfile->id,
+                        'type' => PointLedgerType::CREDIT,
+                        'points' => $points,
+                        'available_balance_after' => $lockedProfile->available_points,
+                        'held_balance_after' => $lockedProfile->held_points,
+                        'reference_type' => Booking::class,
+                        'reference_id' => $lockedBooking->id,
+                        'description' => "Reward trip selesai {$lockedBooking->booking_code}.",
+                        'occurred_at' => now(),
+                    ]);
+                }
+            }
+        });
 
         return response()->json([
             'success' => true,
