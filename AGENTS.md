@@ -47,116 +47,106 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Booking transitions are strict: pending → confirmed/cancelled, confirmed → ongoing/cancelled, ongoing → completed, completed/cancelled final.
 - Confirming requires paid payment; starting/completing requires paid payment and accepted assignment.
 - Travel groups may originate from `driver` or `website`; admin controls operational grouping in MVP.
-- A booking may belong to one travel group through `bookings.travel_group_id`.
-- Participant vehicle allocation is controlled by admin and targets accepted driver assignments from the same booking.
-- One booking participant may have only one current vehicle allocation.
-- Allocated participant count may not exceed the assigned vehicle capacity.
-- Driver points use a ledger; withdrawal holds balance while pending.
-- Re-upload replaces rejected files, deletes old public files after success, resets status to pending, and clears review metadata.
+- Participant allocation targets accepted assignments from the same booking and may not exceed vehicle capacity.
+- Completing a booking awards each accepted driver a configurable number of points once per booking.
+- Default MVP values: 100 points per completed trip, 1 point = Rp1.000, minimum withdrawal 100 points. Values are configurable via environment.
+- Withdrawal creation moves points from available to held.
+- Rejected withdrawal releases held points back to available.
+- Approved withdrawal remains held until marked paid.
+- Paid withdrawal removes points from held and records a debit ledger entry.
 
 ## Implemented progress
 
 ### Foundation and actors
 
-- Laravel 13 + MySQL/MariaDB, health endpoint, Sanctum login/current-user/logout, role middleware.
-- Public tour packages, admin package/vehicle CRUD.
+- Laravel 13 + MySQL/MariaDB, Sanctum, role middleware, tour packages, vehicles.
 - Driver registration, verification, dashboard, availability, documents, vehicles, and document re-upload.
 - Customer registration/profile, bookings, participants, and ownership isolation.
 
 ### Booking transaction flow
 
-- Payment submission and admin verification.
-- Paid guard before assignment.
-- Admin driver assignment; driver list/detail/accept/reject.
-- Accepted-date conflicts and manual availability rules.
-- Strict booking status state machine.
+- Payment submission/admin verification, paid assignment guard, assignment response, strict booking state machine.
+- Travel groups and participant-to-vehicle allocation with ownership and capacity validation.
 
-### Travel groups and participant allocation
+### Points and withdrawal
 
-- Existing `travel_groups`, `travel_group_members`, and `bookings.travel_group_id` structures are used.
-- Admin can create/list/detail travel groups with `driver` or `website` source.
-- Group creation supports leader, members, member limit, and notes.
-- Duplicate member IDs are collapsed; leader is inserted as a member and marked `is_leader`.
-- Admin can attach a non-final booking to a travel group.
-- Group member limit is enforced against total booking participant counts when attaching bookings.
-- `booking_participant_vehicle_allocations` maps one participant to one accepted assignment.
-- Participant and assignment must belong to the same booking.
-- Only accepted assignments may receive participants.
-- Vehicle capacity is enforced on allocation.
-- Reallocation uses update-or-create, moving a participant from one assignment to another.
-- Admin can view allocations and unallocated participants for a booking.
-- The allocation migration now safely returns when the table already exists, allowing an existing local table to be registered in Laravel's migration history without dropping data.
+- Existing `point_ledgers`, `withdrawals`, and driver available/held point balances are used.
+- Booking completion credits every accepted driver once per booking using `PointLedgerType::CREDIT`.
+- Reward amount is configured by `OFFROAD_POINTS_PER_COMPLETED_TRIP` (default 100).
+- Driver can view point summary and paginated ledger.
+- Driver can list withdrawals and submit a withdrawal when available balance is sufficient.
+- Withdrawal amount is calculated server-side using `OFFROAD_RUPIAH_PER_POINT` (default 1000).
+- Minimum withdrawal is configured by `OFFROAD_MINIMUM_WITHDRAWAL_POINTS` (default 100).
+- Pending withdrawal records a HOLD ledger entry and moves available points to held.
+- Admin can list/detail withdrawals and process strict transitions: pending → approved/rejected, approved → paid.
+- Rejection records RELEASE and returns held points to available.
+- Paid records DEBIT and removes points from held.
+- Balance mutations use database transactions and row locks.
 
 ## Current expected end-to-end flow
 
 ```text
 customer creates booking
 → uploads payment proof
-→ admin approves payment
-→ admin confirms booking
-→ admin assigns one or more drivers/vehicles
-→ drivers accept
-→ admin creates/chooses travel group and attaches booking
-→ admin allocates every booking participant to accepted assignments within vehicle capacity
-→ admin starts booking
-→ admin completes booking
+→ admin approves payment and confirms booking
+→ admin assigns driver/vehicle
+→ driver accepts
+→ admin starts and completes booking
+→ accepted driver receives points once
+→ driver submits withdrawal
+→ available points move to held
+→ admin approves then marks paid, or rejects and releases points
 ```
 
 ## Current relevant endpoints
 
 ```text
-GET  /api/v1/admin/travel-groups
-POST /api/v1/admin/travel-groups
-GET  /api/v1/admin/travel-groups/{travelGroup}
-POST /api/v1/admin/travel-groups/{travelGroup}/bookings
-GET  /api/v1/admin/bookings/{booking}/participant-allocations
-PUT  /api/v1/admin/bookings/{booking}/participant-allocations
+GET   /api/v1/driver/points/summary
+GET   /api/v1/driver/points/ledger
+GET   /api/v1/driver/withdrawals
+POST  /api/v1/driver/withdrawals
+GET   /api/v1/admin/withdrawals
+GET   /api/v1/admin/withdrawals/{withdrawal}
+PATCH /api/v1/admin/withdrawals/{withdrawal}
 ```
-
-All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
-- `c9a51f7933b85655d2c431c64eb99208538193d5` — make participant allocation migration safe when the table already exists locally.
-- `d77fbae4bc93fdd8664cf8e92c3277e1be4dd57d` — expose travel group and participant allocation routes.
-- `0b5a19467b1b0e3abd8da8d086966ff716e17edc` — link participants to vehicle allocations.
-- `3c58f843c61b4829bada4cde18306751d56809ee` — travel group and participant allocation API.
-- `670c23e1ca0fcc9973b7a68e186242f465ca1ce2` — participant allocation model.
-- `1cbb8950a321bd05f45927d8fabd97dc64b46755` — participant vehicle allocation migration.
-- `65f6db18419a6de046e73623eef231073a732e7c` — strict booking state machine.
+- `721b42f7a9aa562e40539782f4cd440e8d689c4a` — expose points and withdrawal routes.
+- `402da1025eacc191135e00dd4c1eb60a062360a4` — award points idempotently when a booking is completed.
+- `1ffa5d016b5d0fb2632d84686cf404a65c6960b5` — admin withdrawal processing.
+- `b13cfc0bb040b5f92fa773329c9e502ee48ffacf` — driver point summary, ledger, and withdrawal request.
+- `d8e168b7cbd4c8b312cc8640107f7641540632cd` — points configuration.
 
 ## Verification status and limitations
 
 - Runtime tests were not executed because no local Laravel runtime/database was available here.
-- The local migration failure was caused by an existing table whose new migration name had not yet been recorded.
-- The migration now skips creation when that table already exists; it does not delete or rebuild existing data.
-- Existing table columns/indexes should still be inspected locally before using participant allocation APIs.
-- Automated feature tests for travel groups, capacity, cross-booking ownership, and reallocation remain to be added.
+- No new migration was required; the point and withdrawal tables already existed.
+- Automated feature tests for idempotent rewards, concurrent withdrawals, release, and paid transitions remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
-php artisan migrate:status
-php artisan route:list --path=api/v1/admin
+php artisan route:list --path=api/v1/driver
+php artisan route:list --path=api/v1/admin/withdrawals
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Points and withdrawal
+### Priority 1 — Production hardening
 
-- point ledger and trip completion awards
-- available/held balances
-- withdrawal request, approve, reject, paid
-
-### Priority 2 — Production hardening
-
-- reports, notifications, queues, audit logs, rate limiting, API docs, backup, deployment, and client integration
+- feature tests for critical full flows
+- audit logs
+- notifications and queues
+- rate limiting and API documentation
+- reports, backup, deployment, and client integration
 
 ## Recommended immediate continuation
 
 ```text
-Points and withdrawal
-→ Production hardening
+Critical feature tests
+→ Audit logs and notifications
+→ API documentation and deployment hardening
 ```
