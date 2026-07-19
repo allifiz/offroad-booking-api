@@ -44,7 +44,17 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Availability indicates readiness to receive work; conflicts use accepted assignments on the same tour date.
 - Multiple offers may exist for the same driver/date, but only one conflicting assignment may be accepted.
 - Assignment creation requires a paid booking.
-- Booking cannot become ongoing/completed without paid payment and an accepted assignment.
+- Booking state transitions are strict:
+
+  ```text
+  pending → confirmed | cancelled
+  confirmed → ongoing | cancelled
+  ongoing → completed
+  completed/cancelled → final
+  ```
+
+- Confirming a booking requires payment `paid`.
+- Starting/completing a booking requires payment `paid` and an accepted assignment.
 - Participant allocation remains flexible and controlled by admin.
 - Travel groups can originate from a driver or website.
 - Driver points use a ledger; withdrawal holds balance while pending.
@@ -76,18 +86,22 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Paid booking guard before assignment.
 - Admin booking list/detail/status and driver/vehicle assignment.
 - Driver assignment list/detail/accept/reject with repeated-response and accepted-date conflict guards.
-- Ongoing/completed require paid payment and accepted assignment.
+- Booking state machine blocks skips, backward transitions, repeat transitions, and illegal cancellation.
+- `pending → confirmed` requires paid payment.
+- `confirmed → ongoing` and `ongoing → completed` require paid payment and an accepted assignment.
+- Cancelling from pending/confirmed cancels offered or accepted assignments.
 
 ## Current expected end-to-end flow
 
 ```text
-customer creates booking
+customer creates booking (pending/unpaid)
 → customer uploads payment proof
-→ admin approves payment
+→ admin approves payment (paid)
+→ admin confirms booking
 → admin assigns driver and vehicle
 → driver accepts
-→ booking ongoing
-→ booking completed
+→ admin starts booking (ongoing)
+→ admin completes booking
 ```
 
 Document correction flow:
@@ -103,6 +117,7 @@ admin rejects individual document with reason
 ## Current relevant endpoints
 
 ```text
+PATCH /api/v1/admin/bookings/{booking}/status
 GET   /api/v1/driver/profile
 PATCH /api/v1/driver/profile
 PATCH /api/v1/driver/availability
@@ -128,6 +143,7 @@ All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
+- `65f6db18419a6de046e73623eef231073a732e7c` — enforce strict booking status state machine.
 - `8cbd4bf56685537cba15e86e0373bde89e4278e8` — expose admin document verification and driver re-upload routes.
 - `a1562e452f1fb1561784f1960dd1d0e4b919516c` — admin individual document verification.
 - `22dc8cacd6d64c97a592dea2790f332882dd738a` — rejected driver/vehicle document re-upload.
@@ -139,47 +155,38 @@ All protected endpoints require Sanctum and the corresponding role.
 ## Verification status and limitations
 
 - Runtime tests were not executed in this environment because no local Laravel runtime/database was available.
-- No migration was added for document verification/re-upload.
-- Automated feature tests specifically for document verification/re-upload remain to be added.
+- No migration was added for booking state-machine hardening.
+- Automated feature tests specifically for all legal/illegal booking transitions remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
-php artisan storage:link
-php artisan route:list --path=api/v1
+php artisan route:list --path=api/v1/admin/bookings
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Booking state-machine hardening
-
-```text
-pending → confirmed | cancelled
-confirmed → ongoing | cancelled
-ongoing → completed
-completed/cancelled → final
-```
-
-Prevent direct skips, backward transitions, and illegal cancellation.
-
-### Priority 2 — Travel groups and participant allocation
+### Priority 1 — Travel groups and participant allocation
 
 - driver-origin and website-origin groups
 - leader/member management
 - participant-to-vehicle allocation
 - capacity enforcement
 
-### Priority 3 — Points, withdrawal, and production hardening
+### Priority 2 — Points and withdrawal
 
 - point ledger and trip awards
 - held/available balances and withdrawal processing
+
+### Priority 3 — Production hardening
+
 - reports, notifications, queues, audit logs, rate limiting, API docs, backup, deployment, and client integration
 
 ## Recommended immediate continuation
 
 ```text
-Booking state-machine hardening
-→ Travel groups and participant allocation
+Travel groups and participant allocation
 → Points and withdrawal
+→ Production hardening
 ```
