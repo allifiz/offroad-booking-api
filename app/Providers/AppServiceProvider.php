@@ -14,6 +14,7 @@ use App\Models\VehicleDocument;
 use App\Models\VehiclePhoto;
 use App\Models\Withdrawal;
 use App\Observers\AuditObserver;
+use App\Observers\OperationalNotificationObserver;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -39,6 +40,17 @@ class AppServiceProvider extends ServiceProvider
             Withdrawal::class,
         ] as $model) {
             $model::observe(AuditObserver::class);
+        }
+
+        foreach ([
+            Booking::class,
+            DriverAssignment::class,
+            DriverProfile::class,
+            Payment::class,
+            Vehicle::class,
+            Withdrawal::class,
+        ] as $model) {
+            $model::observe(OperationalNotificationObserver::class);
         }
     }
 }
