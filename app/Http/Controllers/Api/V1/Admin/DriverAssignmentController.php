@@ -67,32 +67,6 @@ class DriverAssignmentController extends Controller
             throw ValidationException::withMessages(['vehicle_id' => ['Kendaraan tidak dimiliki oleh driver yang dipilih.']]);
         }
 
-        $driverConflict = DriverAssignment::query()
-            ->where('driver_id', $driver->id)
-            ->whereIn('status', [DriverAssignmentStatus::OFFERED, DriverAssignmentStatus::ACCEPTED])
-            ->whereHas('booking', fn ($query) => $query
-                ->whereDate('tour_date', $booking->tour_date)
-                ->whereKeyNot($booking->id)
-                ->whereNotIn('status', [BookingStatus::CANCELLED, BookingStatus::COMPLETED]))
-            ->exists();
-
-        if ($driverConflict) {
-            throw ValidationException::withMessages(['driver_id' => ['Driver sudah memiliki assignment pada tanggal tersebut.']]);
-        }
-
-        $vehicleConflict = DriverAssignment::query()
-            ->where('vehicle_id', $vehicle->id)
-            ->whereIn('status', [DriverAssignmentStatus::OFFERED, DriverAssignmentStatus::ACCEPTED])
-            ->whereHas('booking', fn ($query) => $query
-                ->whereDate('tour_date', $booking->tour_date)
-                ->whereKeyNot($booking->id)
-                ->whereNotIn('status', [BookingStatus::CANCELLED, BookingStatus::COMPLETED]))
-            ->exists();
-
-        if ($vehicleConflict) {
-            throw ValidationException::withMessages(['vehicle_id' => ['Kendaraan sudah memiliki assignment pada tanggal tersebut.']]);
-        }
-
         $assignment = DB::transaction(function () use ($request, $booking, $driver, $vehicle): DriverAssignment {
             return DriverAssignment::query()->updateOrCreate(
                 [
