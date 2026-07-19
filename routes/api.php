@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Api\V1\Admin\DocumentVerificationController;
 use App\Http\Controllers\Api\V1\Admin\DriverAssignmentController;
 use App\Http\Controllers\Api\V1\Admin\DriverVehicleVerificationController;
 use App\Http\Controllers\Api\V1\Admin\DriverVerificationController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Api\V1\CustomerProfileController;
 use App\Http\Controllers\Api\V1\CustomerRegistrationController;
 use App\Http\Controllers\Api\V1\DriverAssignmentController as DriverAssignmentResponseController;
 use App\Http\Controllers\Api\V1\DriverDashboardController;
+use App\Http\Controllers\Api\V1\DriverDocumentController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\TourPackageController;
@@ -66,6 +68,8 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('/availability', [DriverDashboardController::class, 'updateAvailability']);
             Route::get('/vehicles', [DriverDashboardController::class, 'vehicles']);
             Route::get('/vehicles/{vehicle}', [DriverDashboardController::class, 'showVehicle']);
+            Route::post('/documents/{driverDocument}/reupload', [DriverDocumentController::class, 'reuploadDriverDocument']);
+            Route::post('/vehicles/{vehicle}/documents/{vehicleDocument}/reupload', [DriverDocumentController::class, 'reuploadVehicleDocument']);
 
             Route::get('/assignments', [DriverAssignmentResponseController::class, 'index']);
             Route::get('/assignments/{driverAssignment}', [DriverAssignmentResponseController::class, 'show']);
@@ -83,6 +87,8 @@ Route::prefix('v1')->group(function (): void {
             Route::get('drivers/{driverProfile}', [DriverVerificationController::class, 'show']);
             Route::patch('drivers/{driverProfile}/verification', [DriverVerificationController::class, 'update']);
             Route::patch('driver-vehicles/{vehicle}/verification', [DriverVehicleVerificationController::class, 'update']);
+            Route::patch('driver-documents/{driverDocument}/verification', [DocumentVerificationController::class, 'updateDriverDocument']);
+            Route::patch('driver-vehicles/{vehicle}/documents/{vehicleDocument}/verification', [DocumentVerificationController::class, 'updateVehicleDocument']);
 
             Route::get('bookings', [AdminBookingController::class, 'index']);
             Route::get('bookings/{booking}', [AdminBookingController::class, 'show']);
