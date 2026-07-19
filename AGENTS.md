@@ -79,12 +79,13 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Duplicate member IDs are collapsed; leader is inserted as a member and marked `is_leader`.
 - Admin can attach a non-final booking to a travel group.
 - Group member limit is enforced against total booking participant counts when attaching bookings.
-- New `booking_participant_vehicle_allocations` table maps one participant to one accepted assignment.
+- `booking_participant_vehicle_allocations` maps one participant to one accepted assignment.
 - Participant and assignment must belong to the same booking.
 - Only accepted assignments may receive participants.
 - Vehicle capacity is enforced on allocation.
 - Reallocation uses update-or-create, moving a participant from one assignment to another.
 - Admin can view allocations and unallocated participants for a booking.
+- The allocation migration now safely returns when the table already exists, allowing an existing local table to be registered in Laravel's migration history without dropping data.
 
 ## Current expected end-to-end flow
 
@@ -116,6 +117,7 @@ All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
+- `c9a51f7933b85655d2c431c64eb99208538193d5` — make participant allocation migration safe when the table already exists locally.
 - `d77fbae4bc93fdd8664cf8e92c3277e1be4dd57d` — expose travel group and participant allocation routes.
 - `0b5a19467b1b0e3abd8da8d086966ff716e17edc` — link participants to vehicle allocations.
 - `3c58f843c61b4829bada4cde18306751d56809ee` — travel group and participant allocation API.
@@ -126,13 +128,16 @@ All protected endpoints require Sanctum and the corresponding role.
 ## Verification status and limitations
 
 - Runtime tests were not executed because no local Laravel runtime/database was available here.
-- A migration was added and must be run locally.
+- The local migration failure was caused by an existing table whose new migration name had not yet been recorded.
+- The migration now skips creation when that table already exists; it does not delete or rebuild existing data.
+- Existing table columns/indexes should still be inspected locally before using participant allocation APIs.
 - Automated feature tests for travel groups, capacity, cross-booking ownership, and reallocation remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
+php artisan migrate:status
 php artisan route:list --path=api/v1/admin
 php artisan test
 ```
