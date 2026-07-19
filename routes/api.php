@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Api\V1\Admin\DocumentVerificationController;
 use App\Http\Controllers\Api\V1\Admin\DriverAssignmentController;
@@ -92,6 +93,9 @@ Route::prefix('v1')->group(function (): void {
     Route::prefix('admin')
         ->middleware(['auth:sanctum', 'role:admin'])
         ->group(function (): void {
+            Route::get('audit-logs', [AuditLogController::class, 'index']);
+            Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show']);
+
             Route::apiResource('tour-packages', AdminTourPackageController::class);
             Route::apiResource('vehicles', AdminVehicleController::class);
             Route::get('drivers', [DriverVerificationController::class, 'index']);
