@@ -40,7 +40,10 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Driver and vehicle registration start pending/unavailable.
 - Admin verifies drivers, vehicles, driver documents, and vehicle documents.
 - Driver-owned vehicles are always created with ownership `driver`, verification `pending`, and availability `unavailable`.
-- Changing vehicle identity/capacity data resets verification to pending and availability to unavailable.
+- Changing vehicle identity/capacity, adding/replacing a vehicle document, or adding/deleting a vehicle photo resets vehicle verification to pending and availability to unavailable.
+- Vehicle document type is unique per vehicle; uploading the same type replaces the previous file after the new file is safely stored.
+- Vehicle photos use types: `front`, `back`, `left`, `right`, `interior`, or `other`.
+- Reordering photos does not reset verification because it does not change media content.
 - Vehicles with offered or accepted assignments cannot be deleted.
 - Admin offers assignments; drivers accept or reject them.
 - Availability does not automatically change when an assignment is accepted.
@@ -68,7 +71,11 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Changes to name, plate, brand, model, year, or capacity reset verification metadata and availability.
 - Notes-only updates do not trigger re-verification.
 - Delete is blocked while offered or accepted assignments exist.
-- Vehicle has a `driverAssignments()` relationship for active-assignment guards.
+- Driver can upload or replace one document per document type.
+- Document replacement resets document and vehicle verification and deletes the previous public file after success.
+- Driver can upload vehicle photos, reorder owned photos, and delete owned photos.
+- Adding or deleting a photo resets vehicle verification; reordering alone does not.
+- Registration vehicle photos now write to the real `vehicle_photos.type` column instead of the invalid `photo_type` key.
 
 ### Booking transaction flow
 
@@ -89,7 +96,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `PaymentFlowTest`
 - `DriverAssignmentResponseFlowTest`
 - `ParticipantAllocationFlowTest`
-- `DriverVehicleCrudFlowTest` covers vehicle creation defaults, notes-only updates, sensitive-field re-verification, ownership isolation, plate uniqueness, deletion, and active-assignment deletion guards.
+- `DriverVehicleCrudFlowTest`
 - Tests use SQLite in-memory and `RefreshDatabase`; true locking/concurrency must be validated with MySQL.
 
 ## Current relevant endpoints
@@ -100,42 +107,47 @@ POST   /api/v1/driver/vehicles
 GET    /api/v1/driver/vehicles/{vehicle}
 PATCH  /api/v1/driver/vehicles/{vehicle}
 DELETE /api/v1/driver/vehicles/{vehicle}
+POST   /api/v1/driver/vehicles/{vehicle}/documents
+POST   /api/v1/driver/vehicles/{vehicle}/documents/{vehicleDocument}/reupload
+POST   /api/v1/driver/vehicles/{vehicle}/photos
+PUT    /api/v1/driver/vehicles/{vehicle}/photos/order
+DELETE /api/v1/driver/vehicles/{vehicle}/photos/{vehiclePhoto}
 ```
 
 All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
+- `13218a9fdc1671854f983c87354d1209a3dbf931` — expose driver vehicle document/photo management routes.
+- `9d0a01e0112e2f95fa6c7fe213fddf7dd3ff77ad` — fix registration vehicle photo column mapping.
+- `29ebabad2bbbf858db3c111524dc7973a0e77e01` — driver vehicle document upload/replacement and photo upload/delete/order management.
 - `0d7a59596637c25f4ac450604972ccbdabd6136c` — driver vehicle CRUD feature tests.
 - `89eb5d2ee2a08fbed92d08154a0b4f6c5a5338c3` — expose driver vehicle CRUD routes.
-- `265a29a16a81e58662c740cb1804f2acad55ec3b` — add vehicle-to-assignment relationship.
-- `87191a79a587351820e56358122c076885831359` — implement driver-owned vehicle create/update/delete.
-- `776fafd9f1ece0345ef658e28e656ade21c037ac` — participant allocation feature tests.
 
 ## Verification status and limitations
 
 - Runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
-- No migration was required for driver vehicle CRUD or its tests.
-- Driver vehicle document/photo creation APIs remain to be added.
+- No migration was required for vehicle document/photo management.
+- Vehicle media feature tests remain to be added and run locally.
+- Existing driver registration tests should be rerun because the photo field mapping was corrected.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
+php artisan route:list --path=api/v1/driver/vehicles
 php artisan test --filter=DriverVehicleCrudFlowTest
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Driver vehicle completeness
+### Priority 1 — Vehicle media verification
 
-- run/fix driver vehicle CRUD feature tests
-- vehicle document upload/create management
-- vehicle photo upload/delete/order management
+- add feature tests for document replacement, file cleanup, photo ownership, reorder, deletion, and verification reset
+- run/fix full current test suite
 
 ### Priority 2 — Test execution and concurrency
 
-- run/fix full current test suite
 - concurrent withdrawal protection using MySQL test database
 
 ### Priority 3 — Production hardening
@@ -148,7 +160,7 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Run driver vehicle CRUD and full test suite
-→ Add vehicle document/photo management
+Run vehicle media and full test suite
+→ Add vehicle media feature tests
 → Audit logs and notifications
 ```
