@@ -90,7 +90,7 @@ class DriverRegistrationController extends Controller
                     $storedPaths[] = $path;
                     $vehicle->photos()->create([
                         'file_path' => $path,
-                        'photo_type' => $index === 0 ? 'primary' : 'gallery',
+                        'type' => $index === 0 ? 'front' : 'other',
                         'sort_order' => $index,
                     ]);
                 }
