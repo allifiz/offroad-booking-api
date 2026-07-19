@@ -89,6 +89,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `PaymentFlowTest`
 - `DriverAssignmentResponseFlowTest`
 - `ParticipantAllocationFlowTest`
+- `DriverVehicleCrudFlowTest` covers vehicle creation defaults, notes-only updates, sensitive-field re-verification, ownership isolation, plate uniqueness, deletion, and active-assignment deletion guards.
 - Tests use SQLite in-memory and `RefreshDatabase`; true locking/concurrency must be validated with MySQL.
 
 ## Current relevant endpoints
@@ -105,22 +106,22 @@ All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
+- `0d7a59596637c25f4ac450604972ccbdabd6136c` — driver vehicle CRUD feature tests.
 - `89eb5d2ee2a08fbed92d08154a0b4f6c5a5338c3` — expose driver vehicle CRUD routes.
 - `265a29a16a81e58662c740cb1804f2acad55ec3b` — add vehicle-to-assignment relationship.
 - `87191a79a587351820e56358122c076885831359` — implement driver-owned vehicle create/update/delete.
 - `776fafd9f1ece0345ef658e28e656ade21c037ac` — participant allocation feature tests.
-- `4161ee4f890c8df71dc7dc92a963443607ce208c` — assignment response/conflict tests.
 
 ## Verification status and limitations
 
 - Runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
-- No migration was required for driver vehicle CRUD.
-- Driver vehicle document/photo creation APIs and CRUD feature tests remain to be added.
+- No migration was required for driver vehicle CRUD or its tests.
+- Driver vehicle document/photo creation APIs remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
-php artisan route:list --path=api/v1/driver/vehicles
+php artisan test --filter=DriverVehicleCrudFlowTest
 php artisan test
 ```
 
@@ -128,7 +129,7 @@ php artisan test
 
 ### Priority 1 — Driver vehicle completeness
 
-- driver vehicle CRUD feature tests
+- run/fix driver vehicle CRUD feature tests
 - vehicle document upload/create management
 - vehicle photo upload/delete/order management
 
