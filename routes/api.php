@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\CustomerProfileController;
 use App\Http\Controllers\Api\V1\CustomerRegistrationController;
+use App\Http\Controllers\Api\V1\DriverAssignmentController as DriverAssignmentResponseController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\TourPackageController;
@@ -54,6 +55,15 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/payments', [PaymentController::class, 'index']);
             Route::post('/bookings/{booking}/payments', [PaymentController::class, 'store']);
             Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+        });
+
+    Route::prefix('driver')
+        ->middleware(['auth:sanctum', 'role:driver'])
+        ->group(function (): void {
+            Route::get('/assignments', [DriverAssignmentResponseController::class, 'index']);
+            Route::get('/assignments/{driverAssignment}', [DriverAssignmentResponseController::class, 'show']);
+            Route::patch('/assignments/{driverAssignment}/accept', [DriverAssignmentResponseController::class, 'accept']);
+            Route::patch('/assignments/{driverAssignment}/reject', [DriverAssignmentResponseController::class, 'reject']);
         });
 
     Route::prefix('admin')
