@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\DriverDocumentController;
 use App\Http\Controllers\Api\V1\DriverPointController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\DriverVehicleMediaController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\TourPackageController;
 use Illuminate\Http\JsonResponse;
@@ -48,6 +49,12 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
         });
+    });
+
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
     });
 
     Route::prefix('customer')
