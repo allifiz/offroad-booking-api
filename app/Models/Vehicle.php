@@ -62,4 +62,9 @@ class Vehicle extends Model
     {
         return $this->hasMany(VehiclePhoto::class)->orderBy('sort_order');
     }
+
+    public function driverAssignments(): HasMany
+    {
+        return $this->hasMany(DriverAssignment::class);
+    }
 }
