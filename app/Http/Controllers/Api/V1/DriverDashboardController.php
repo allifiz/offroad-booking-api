@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\DriverAssignmentStatus;
 use App\Enums\DriverStatus;
+use App\Enums\VehicleOwnershipType;
+use App\Enums\VehicleStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -108,14 +112,120 @@ class DriverDashboardController extends Controller
         ]);
     }
 
-    public function showVehicle(Request $request, Vehicle $vehicle): JsonResponse
+    public function storeVehicle(Request $request): JsonResponse
     {
         $profile = $request->user()->driverProfile;
-        abort_unless($profile && $vehicle->driver_profile_id === $profile->id, Response::HTTP_NOT_FOUND);
+        abort_unless($profile, Response::HTTP_NOT_FOUND);
+
+        $validated = $request->validate($this->vehicleRules());
+
+        $vehicle = $profile->vehicles()->create([
+            ...$validated,
+            'ownership_type' => VehicleOwnershipType::DRIVER,
+            'status' => VehicleStatus::UNAVAILABLE,
+            'verification_status' => VerificationStatus::PENDING,
+            'rejection_reason' => null,
+            'verified_by' => null,
+            'verified_at' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kendaraan berhasil ditambahkan dan menunggu verifikasi admin.',
+            'data' => $vehicle->load(['documents', 'photos']),
+        ], Response::HTTP_CREATED);
+    }
+
+    public function showVehicle(Request $request, Vehicle $vehicle): JsonResponse
+    {
+        $this->ensureVehicleOwnership($request, $vehicle);
 
         return response()->json([
             'success' => true,
             'data' => $vehicle->load(['documents', 'photos', 'verifier']),
         ]);
+    }
+
+    public function updateVehicle(Request $request, Vehicle $vehicle): JsonResponse
+    {
+        $this->ensureVehicleOwnership($request, $vehicle);
+
+        $validated = $request->validate($this->vehicleRules($vehicle, true));
+        $sensitiveFields = ['name', 'plate_number', 'brand', 'model', 'year', 'capacity'];
+        $requiresReverification = collect($sensitiveFields)
+            ->contains(fn (string $field): bool => array_key_exists($field, $validated)
+                && $validated[$field] !== $vehicle->getAttribute($field));
+
+        DB::transaction(function () use ($vehicle, $validated, $requiresReverification): void {
+            $vehicle->update([
+                ...$validated,
+                ...($requiresReverification ? [
+                    'status' => VehicleStatus::UNAVAILABLE,
+                    'verification_status' => VerificationStatus::PENDING,
+                    'rejection_reason' => null,
+                    'verified_by' => null,
+                    'verified_at' => null,
+                ] : []),
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => $requiresReverification
+                ? 'Kendaraan berhasil diperbarui dan menunggu verifikasi ulang admin.'
+                : 'Kendaraan berhasil diperbarui.',
+            'data' => $vehicle->refresh()->load(['documents', 'photos', 'verifier']),
+        ]);
+    }
+
+    public function destroyVehicle(Request $request, Vehicle $vehicle): JsonResponse
+    {
+        $this->ensureVehicleOwnership($request, $vehicle);
+
+        $hasActiveAssignment = $vehicle->driverAssignments()
+            ->whereIn('status', [
+                DriverAssignmentStatus::OFFERED->value,
+                DriverAssignmentStatus::ACCEPTED->value,
+            ])
+            ->exists();
+
+        if ($hasActiveAssignment) {
+            throw ValidationException::withMessages([
+                'vehicle' => ['Kendaraan dengan assignment aktif tidak dapat dihapus.'],
+            ]);
+        }
+
+        $vehicle->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kendaraan berhasil dihapus.',
+        ]);
+    }
+
+    private function ensureVehicleOwnership(Request $request, Vehicle $vehicle): void
+    {
+        $profile = $request->user()->driverProfile;
+        abort_unless($profile && $vehicle->driver_profile_id === $profile->id, Response::HTTP_NOT_FOUND);
+    }
+
+    private function vehicleRules(?Vehicle $vehicle = null, bool $partial = false): array
+    {
+        $presence = $partial ? 'sometimes' : 'required';
+
+        return [
+            'name' => [$presence, 'string', 'max:100'],
+            'plate_number' => [
+                $presence,
+                'string',
+                'max:20',
+                Rule::unique('vehicles', 'plate_number')->ignore($vehicle?->id),
+            ],
+            'brand' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'model' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'year' => ['sometimes', 'nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)],
+            'capacity' => [$presence, 'integer', 'min:1', 'max:100'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ];
     }
 }
