@@ -83,6 +83,15 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Paid records DEBIT and removes points from held.
 - Balance mutations use database transactions and row locks.
 
+### Critical feature tests
+
+- `tests/Feature/DriverWithdrawalFlowTest.php` covers withdrawal request and HOLD ledger creation.
+- Insufficient available balance must not create a withdrawal or mutate balances.
+- Rejected withdrawal must RELEASE held points back to available balance.
+- Approved withdrawal may transition to paid once and records exactly one DEBIT ledger entry.
+- Pending withdrawal may not skip directly to paid.
+- Tests use SQLite in-memory through the existing `phpunit.xml` configuration and Laravel `RefreshDatabase`.
+
 ## Current expected end-to-end flow
 
 ```text
@@ -112,6 +121,7 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 ## Latest relevant commits
 
+- `41ee6aecfb0b538c2f61def9288ed97c33830de2` — withdrawal feature tests for hold, release, debit, balance validation, and strict transitions.
 - `721b42f7a9aa562e40539782f4cd440e8d689c4a` — expose points and withdrawal routes.
 - `402da1025eacc191135e00dd4c1eb60a062360a4` — award points idempotently when a booking is completed.
 - `1ffa5d016b5d0fb2632d84686cf404a65c6960b5` — admin withdrawal processing.
@@ -120,24 +130,31 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 ## Verification status and limitations
 
-- Runtime tests were not executed because no local Laravel runtime/database was available here.
-- No new migration was required; the point and withdrawal tables already existed.
-- Automated feature tests for idempotent rewards, concurrent withdrawals, release, and paid transitions remain to be added.
+- The new withdrawal feature tests were added but were not executed in this environment because no local PHP/Laravel runtime is available through the GitHub connector.
+- No migration was required for the tests.
+- Reward idempotency, booking state machine, payment, assignment, participant allocation, and true concurrent withdrawal tests remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
-php artisan route:list --path=api/v1/driver
-php artisan route:list --path=api/v1/admin/withdrawals
+php artisan test --filter=DriverWithdrawalFlowTest
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Production hardening
+### Priority 1 — Remaining critical feature tests
 
-- feature tests for critical full flows
+- booking completion reward idempotency
+- booking state-machine legal and illegal transitions
+- payment approval and resubmission
+- assignment accept/reject and date conflict
+- participant allocation and vehicle capacity
+- concurrent withdrawal protection
+
+### Priority 2 — Production hardening
+
 - audit logs
 - notifications and queues
 - rate limiting and API documentation
@@ -146,7 +163,7 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Critical feature tests
+Run/fix withdrawal tests locally
+→ Add reward/state-machine/payment/assignment tests
 → Audit logs and notifications
-→ API documentation and deployment hardening
 ```
