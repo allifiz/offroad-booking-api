@@ -28,4 +28,5 @@ class Booking extends Model
     public function travelGroup(): BelongsTo { return $this->belongsTo(TravelGroup::class); }
     public function participants(): HasMany { return $this->hasMany(BookingParticipant::class); }
     public function driverAssignments(): HasMany { return $this->hasMany(DriverAssignment::class); }
+    public function payments(): HasMany { return $this->hasMany(Payment::class); }
 }
