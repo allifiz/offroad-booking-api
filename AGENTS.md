@@ -88,6 +88,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `tests/Feature/DriverWithdrawalFlowTest.php` covers withdrawal request, insufficient balance, HOLD, RELEASE, DEBIT, and strict withdrawal transitions.
 - `tests/Feature/BookingStateAndRewardFlowTest.php` covers illegal booking skips, unpaid confirmation, accepted-assignment requirement, completion reward, repeated completion rejection, and existing-ledger reward idempotency.
 - `tests/Feature/PaymentFlowTest.php` covers proof submission, pending booking synchronization, duplicate pending rejection, admin approval, rejection reason validation, resubmission after failure, and repeated verification prevention.
+- Payment test fixtures that create a payment directly must synchronize `bookings.payment_status` with the created payment status, matching the real API transaction.
 - Booking completion assertions verify driver available balance and exactly one booking CREDIT ledger entry.
 - Payment tests use fake public storage and verify the submitted proof path exists.
 - Tests use SQLite in-memory through the existing `phpunit.xml` configuration and Laravel `RefreshDatabase`.
@@ -124,27 +125,27 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 ## Latest relevant commits
 
+- `13b7f7b7f2842cafa04212ac5254b0f1a8250c79` — synchronize payment test fixture booking status with directly-created payment status.
 - `7927e3e548593ad53d4aefb29823fbcba59f2528` — payment proof, approval, rejection, resubmission, and repeated-verification feature tests.
 - `7ca1a01876bd928e801d792258cb85228640abbf` — booking state-machine and completion reward idempotency feature tests.
 - `41ee6aecfb0b538c2f61def9288ed97c33830de2` — withdrawal feature tests for hold, release, debit, balance validation, and strict transitions.
 - `721b42f7a9aa562e40539782f4cd440e8d689c4a` — expose points and withdrawal routes.
 - `402da1025eacc191135e00dd4c1eb60a062360a4` — award points idempotently when a booking is completed.
-- `1ffa5d016b5d0fb2632d84686cf404a65c6960b5` — admin withdrawal processing.
-- `b13cfc0bb040b5f92fa773329c9e502ee48ffacf` — driver point summary, ledger, and withdrawal request.
 
 ## Verification status and limitations
 
-- The feature tests were added but were not executed in this environment because no local PHP/Laravel runtime is available through the GitHub connector.
-- No migration was required for these tests.
+- User ran `PaymentFlowTest`: 4 passed and one duplicate-pending test failed because its direct fixture created a pending payment while leaving the booking unpaid.
+- The fixture was corrected; the updated test still needs to be rerun locally.
+- No migration was required for this test fix.
 - Assignment response/conflict, participant allocation/capacity, and true concurrent withdrawal tests remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
+php artisan test --filter=PaymentFlowTest
 php artisan test --filter=DriverWithdrawalFlowTest
 php artisan test --filter=BookingStateAndRewardFlowTest
-php artisan test --filter=PaymentFlowTest
 php artisan test
 ```
 
@@ -166,7 +167,7 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Run/fix current feature tests locally
+Rerun PaymentFlowTest after pulling fixture fix
 → Add assignment/allocation tests
 → Audit logs and notifications
 ```
