@@ -21,6 +21,7 @@
 5. Never expose real access tokens.
 6. Never claim tests passed unless they were executed.
 7. Update this file with every backend/project change.
+8. cURL delivery must always be a complete test flow from prerequisites to verification. Include all role logins, prerequisite creation/approval/payment/assignment steps, the main action, success verification, and important failure regressions. Do not provide an isolated endpoint when it cannot be tested without earlier state.
 
 ## Required response structure
 
@@ -32,7 +33,7 @@ After every backend change, respond in this exact order:
 4. **cURL Postman**
 5. **Expected result cURL**
 
-Use Indonesian, include ready-to-run PowerShell, importable cURL, expected HTTP status/JSON, migration requirements, test status, and latest commit SHA.
+Use Indonesian, include ready-to-run PowerShell, importable full-flow cURL, expected HTTP status/JSON, migration requirements, test status, and latest commit SHA.
 
 ## Product decisions
 
@@ -72,6 +73,18 @@ Use Indonesian, include ready-to-run PowerShell, importable cURL, expected HTTP 
 - Admin driver list/detail/approve/reject.
 - Admin driver-vehicle approve/reject.
 - Rejection reason required when rejected.
+
+### Driver dashboard/API
+
+- Driver can view own user/profile data, verification status, rejection reason, documents, vehicles, vehicle documents, and photos.
+- Driver can update allowed profile fields: name, phone, address, and date of birth.
+- Driver can manually switch between `available` and `unavailable`.
+- Suspended drivers cannot change availability.
+- Only approved drivers may switch to `available`; pending/rejected drivers may remain or switch to `unavailable`.
+- Availability toggles do not cancel or modify accepted assignments.
+- Driver can list owned vehicles and view owned vehicle details.
+- Vehicle ownership isolation returns `404` for another driver's vehicle.
+- Re-upload of rejected driver/vehicle documents is not yet implemented.
 
 ### Customer and booking
 
@@ -138,22 +151,29 @@ customer creates booking
 ## Current relevant endpoints
 
 ```text
+GET   /api/v1/driver/profile
+PATCH /api/v1/driver/profile
+PATCH /api/v1/driver/availability
+GET   /api/v1/driver/vehicles
+GET   /api/v1/driver/vehicles/{vehicle}
+GET   /api/v1/driver/assignments
+GET   /api/v1/driver/assignments/{driverAssignment}
+PATCH /api/v1/driver/assignments/{driverAssignment}/accept
+PATCH /api/v1/driver/assignments/{driverAssignment}/reject
 GET   /api/v1/customer/payments
 POST  /api/v1/customer/bookings/{booking}/payments
 GET   /api/v1/customer/payments/{payment}
 GET   /api/v1/admin/payments
 GET   /api/v1/admin/payments/{payment}
 PATCH /api/v1/admin/payments/{payment}/verification
-GET   /api/v1/driver/assignments
-GET   /api/v1/driver/assignments/{driverAssignment}
-PATCH /api/v1/driver/assignments/{driverAssignment}/accept
-PATCH /api/v1/driver/assignments/{driverAssignment}/reject
 ```
 
 All endpoints require Sanctum and their respective role.
 
 ## Latest relevant commits
 
+- `579544fc19180903597b77da2137c76ee6890206` — expose driver dashboard routes.
+- `cdf146bab2bb5a8f98fd8e711d0b45172e97dddc` — driver profile, availability, and owned-vehicle dashboard API.
 - `a9acd8a5be926042ee565eda69b289e2e701a782` — expose driver assignment response routes.
 - `132d4d315047909e8d98d8d976df04fe2817daa2` — defer schedule conflicts until assignment acceptance.
 - `6ea879c5aa9c424937b72f83d63be2f893c3ea80` — driver assignment list/detail/accept/reject.
@@ -161,30 +181,29 @@ All endpoints require Sanctum and their respective role.
 - `0295e0d910f96dd5a0860dfc17bae667d7a9351d` — admin payment verification.
 - `71753163f7c3b6e3055572f8f46d40d604a4eb51` — customer payment submission/history.
 - `bfa4cfdfc02141e32cce14a07f4c51286b8e3fcf` — payments migration.
-- `57bdb505a8c95a9cd8b019345c17a65ad3838d11` — paid booking guards.
 
 ## Verification status and limitations
 
 - Runtime tests were not executed in this environment because no local Laravel runtime/database was available.
-- No migration was added for driver assignment responses.
-- Automated feature tests specifically for driver assignment responses remain to be added if not already covered locally.
+- No migration was added for driver dashboard/API.
+- Automated feature tests specifically for driver dashboard remain to be added if not already covered locally.
 - Run locally after pulling:
 
 ```powershell
 php artisan optimize:clear
-php artisan route:list --path=api/v1
+php artisan route:list --path=api/v1/driver
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Driver dashboard/API
+### Priority 1 — Re-upload rejected documents
 
-- profile and verification status
-- update allowed fields
-- rejected document reasons and re-upload
-- availability toggle with rules
-- manage driver-owned vehicles
+- driver document ownership and rejected-only validation
+- replace rejected driver document file and reset verification to pending
+- vehicle document ownership and rejected-only validation
+- replace rejected vehicle document file and reset verification to pending
+- preserve review history or explicitly define replacement behavior
 
 ### Priority 2 — Booking state-machine hardening
 
@@ -213,7 +232,7 @@ Prevent direct skips, backward transitions, and illegal cancellation.
 ## Recommended immediate continuation
 
 ```text
-Driver dashboard
+Rejected document re-upload
 → Booking state-machine hardening
 → Travel groups and participant allocation
 ```
