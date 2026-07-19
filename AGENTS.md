@@ -50,9 +50,8 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Completing a booking awards each accepted driver configurable points once per booking.
 - Withdrawal creation moves available points to held; rejection releases them; paid removes them from held.
 - Sensitive model create/update/delete operations are automatically audited.
-- Audit logs record actor, subject, old/new values, IP, user agent, URL, and request method.
-- Password, token, and stored-file path fields are excluded from audit payloads.
-- Audit logs are read-only through admin endpoints; no update/delete API is exposed.
+- Operational notifications are stored in the database and dispatched through Laravel queue after transaction commit.
+- Notification ownership is isolated; users can only read their own inbox entries.
 
 ## Implemented progress
 
@@ -76,11 +75,15 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 
 ### Audit logs
 
-- `audit_logs` stores actor, event, polymorphic subject, old/new JSON, IP, user-agent, URL, method, and timestamps.
-- Central `AuditObserver` records created, updated, and deleted events without duplicating controller logic.
-- Observed models: Booking, participant allocation, driver assignment/document/profile, Payment, TravelGroup, Vehicle, VehicleDocument, VehiclePhoto, and Withdrawal.
-- Admin can paginate and filter logs by event, actor, subject type/id, and date range.
-- Admin can view one audit-log detail.
+- Central `AuditObserver` records created, updated, and deleted events for sensitive models.
+- Admin can paginate/filter logs and view detail; audit endpoints are read-only.
+
+### Notifications and queues
+
+- `OperationalNotification` implements `ShouldQueue`, uses the database channel, and dispatches after commit.
+- Automatic notifications cover payment status, booking status, assignment offer/response, driver verification, vehicle verification, and withdrawal status.
+- Authenticated admin/customer/driver users share one notification inbox API.
+- Users can filter unread entries, mark one entry read, or mark all entries read.
 
 ### Critical feature tests
 
@@ -91,40 +94,45 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `ParticipantAllocationFlowTest`
 - `DriverVehicleCrudFlowTest`
 - `VehicleMediaFlowTest`
-- `AuditLogFlowTest` covers automatic actor/request logging, old/new values, sensitive-field exclusion, admin filtering/detail, and non-admin denial.
+- `AuditLogFlowTest`
+- `NotificationFlowTest` covers inbox listing, unread count, per-notification read, read-all, and cross-user ownership denial.
 - Tests use SQLite in-memory and `RefreshDatabase`; true locking/concurrency must be validated with MySQL.
 
 ## Current relevant endpoints
 
 ```text
-GET /api/v1/admin/audit-logs
-GET /api/v1/admin/audit-logs/{auditLog}
+GET   /api/v1/notifications
+PATCH /api/v1/notifications/read-all
+PATCH /api/v1/notifications/{notification}/read
+GET   /api/v1/admin/audit-logs
+GET   /api/v1/admin/audit-logs/{auditLog}
 ```
 
-All protected endpoints require Sanctum and the corresponding role.
+All protected endpoints require Sanctum and the corresponding role where applicable.
 
 ## Latest relevant commits
 
-- `a92900d5a7a52a3a95a4faabf29aba28a81c4830` — audit log feature tests.
-- `3c1ab30c2063b7447715d188c02d7707fb4d42a0` — expose admin audit-log endpoints.
-- `02083801ae17ac68634f6cf46fb9bc82cf26917c` — admin audit-log list/detail controller.
-- `a47d1f03e6135a34aa6d615653e3836f89df27aa` — register centralized observer for sensitive models.
-- `0063fa5cbd4d82c3d805b2d38f72df8c12e7e552` — centralized audit observer.
-- `e0a38994cd1d0aec06ff6dcd987b1bd5ef40f184` — audit log model.
-- `ec4ab183754a2c9a1ceacc627dbd5dabf67e7a05` — audit logs migration.
+- `038c50f470af8899a4313505529d8b4ad81607a8` — notification inbox feature tests.
+- `19e113ac41de7c00b25b369a89570d4aba1e5e1d` — expose authenticated notification routes.
+- `c417e616db360e5c9da0a3e0b3ec864c5d4620c7` — notification inbox controller.
+- `a45474736b186e65fa97f944680daae00f4cb8f8` — register operational notification observers.
+- `3252550c9dc10a13002bc6cf77bf4e890398edd6` — operational state-change observer.
+- `2d561bedcb8b0891e4ba08e01802fe96db75d9dc` — queued database notification class.
+- `880a3439a14257ff7827b218390180d98c45aba7` — notifications table migration.
 
 ## Verification status and limitations
 
-- Audit-log runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
-- The audit feature requires the new `audit_logs` migration.
-- Audit logs currently track model-level create/update/delete; custom semantic event names such as `payment.approved` can be added later if reporting requires them.
+- Notification runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
+- The feature requires the new `notifications` migration.
+- `phpunit.xml` uses `QUEUE_CONNECTION=sync`, so queued notifications execute synchronously during tests.
+- Production must run a queue worker when `QUEUE_CONNECTION` is asynchronous, for example database or Redis.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
-php artisan route:list --path=api/v1/admin/audit-logs
-php artisan test --filter=AuditLogFlowTest
+php artisan route:list --path=api/v1/notifications
+php artisan test --filter=NotificationFlowTest
 php artisan test
 ```
 
@@ -132,19 +140,19 @@ php artisan test
 
 ### Priority 1 — Verification and concurrency
 
-- run/fix `AuditLogFlowTest` and full test suite
+- run/fix `NotificationFlowTest`, `AuditLogFlowTest`, and the full test suite
 - validate concurrent withdrawal protection using a MySQL test database
 
 ### Priority 2 — Production hardening
 
-- notifications and queues
+- production queue configuration and worker supervision
 - rate limiting and OpenAPI documentation
 - reports, backup, deployment, and client integration
 
 ## Recommended immediate continuation
 
 ```text
-Run/fix AuditLogFlowTest and full suite
+Run/fix notification and full test suite
 → Validate concurrent withdrawal with MySQL
-→ Add notifications and queues
+→ Add rate limiting and OpenAPI documentation
 ```
