@@ -49,6 +49,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Participant allocation targets accepted assignments from the same booking and may not exceed vehicle capacity.
 - Completing a booking awards each accepted driver configurable points once per booking.
 - Withdrawal creation moves available points to held; rejection releases them; paid removes them from held.
+- Withdrawal balance mutation must lock the driver-profile row in MySQL so parallel requests cannot spend the same points.
 - Sensitive model create/update/delete operations are automatically audited.
 - Operational notifications are stored in the database and dispatched through Laravel queue after transaction commit.
 - Notification ownership is isolated; users can only read their own inbox entries.
@@ -71,7 +72,8 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Booking completion credits accepted drivers once per booking.
 - Driver point summary, ledger, withdrawal request/list.
 - Admin strict withdrawal processing: pending → approved/rejected, approved → paid.
-- Balance mutations use transactions and row locks.
+- Withdrawal request logic lives in `WithdrawalService` and uses a row lock plus a retryable transaction.
+- The API controller and the concurrency worker command use the same service, avoiding divergent financial logic.
 
 ### Audit logs
 
@@ -95,8 +97,16 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `DriverVehicleCrudFlowTest`
 - `VehicleMediaFlowTest`
 - `AuditLogFlowTest`
-- `NotificationFlowTest` covers inbox listing, unread count, per-notification read, read-all, and cross-user ownership denial.
-- Tests use SQLite in-memory and `RefreshDatabase`; true locking/concurrency must be validated with MySQL.
+- `NotificationFlowTest`
+- `tests/Integration/MySql/ConcurrentWithdrawalTest.php` launches two separate Artisan worker processes against the same MySQL database and asserts exactly one withdrawal succeeds.
+- Standard feature tests use SQLite memory; row-lock concurrency uses the dedicated MySQL suite.
+
+## MySQL concurrency test setup
+
+- Dedicated PHPUnit config: `phpunit.mysql.xml`.
+- Default database: `offroad_booking_test` on `127.0.0.1:3306`, user `root`, empty password.
+- The test executes `migrate:fresh`; never point this configuration at development or production data.
+- Internal worker command: `php artisan withdrawal:attempt`.
 
 ## Current relevant endpoints
 
@@ -106,42 +116,44 @@ PATCH /api/v1/notifications/read-all
 PATCH /api/v1/notifications/{notification}/read
 GET   /api/v1/admin/audit-logs
 GET   /api/v1/admin/audit-logs/{auditLog}
+POST  /api/v1/driver/withdrawals
 ```
 
 All protected endpoints require Sanctum and the corresponding role where applicable.
 
 ## Latest relevant commits
 
+- `89c5df69849a86451eafd675ae50c1bbcded4eb6` — two-process MySQL concurrent withdrawal integration test.
+- `33b33ce0676be9795384dc40d5a3c82a909ae09b` — dedicated MySQL PHPUnit configuration.
+- `b13741a5f012e9f9ed8adbcd09be7e728681445b` — internal withdrawal concurrency worker command.
+- `b876e9bc8dcbbd2c187914501fe4a2f6db80e496` — route API withdrawal creation through the shared service.
+- `9a24bf9770fb04f5139563eb74ab6f3735221c2e` — locked withdrawal service.
 - `038c50f470af8899a4313505529d8b4ad81607a8` — notification inbox feature tests.
-- `19e113ac41de7c00b25b369a89570d4aba1e5e1d` — expose authenticated notification routes.
-- `c417e616db360e5c9da0a3e0b3ec864c5d4620c7` — notification inbox controller.
-- `a45474736b186e65fa97f944680daae00f4cb8f8` — register operational notification observers.
-- `3252550c9dc10a13002bc6cf77bf4e890398edd6` — operational state-change observer.
-- `2d561bedcb8b0891e4ba08e01802fe96db75d9dc` — queued database notification class.
-- `880a3439a14257ff7827b218390180d98c45aba7` — notifications table migration.
+- `a92900d5a7a52a3a95a4faabf29aba28a81c4830` — audit log feature tests.
 
 ## Verification status and limitations
 
-- Notification runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
-- The feature requires the new `notifications` migration.
-- `phpunit.xml` uses `QUEUE_CONNECTION=sync`, so queued notifications execute synchronously during tests.
-- Production must run a queue worker when `QUEUE_CONNECTION` is asynchronous, for example database or Redis.
+- Runtime tests were not executed in this environment because the GitHub connector has no PHP or MySQL runtime.
+- The concurrency test is intentionally excluded from the default SQLite suite.
+- `phpunit.mysql.xml` calls `migrate:fresh`, so its database must be an isolated disposable test database.
+- Windows is supported because the test uses Symfony Process instead of `pcntl_fork`.
+- Existing withdrawal feature tests should be rerun after the service refactor.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
-php artisan route:list --path=api/v1/notifications
-php artisan test --filter=NotificationFlowTest
+php artisan test --filter=DriverWithdrawalFlowTest
 php artisan test
+php artisan test --configuration=phpunit.mysql.xml
 ```
 
 ## Next progress list
 
-### Priority 1 — Verification and concurrency
+### Priority 1 — Verification
 
-- run/fix `NotificationFlowTest`, `AuditLogFlowTest`, and the full test suite
-- validate concurrent withdrawal protection using a MySQL test database
+- run/fix the standard full suite
+- run/fix the dedicated MySQL concurrency suite
 
 ### Priority 2 — Production hardening
 
@@ -152,7 +164,8 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Run/fix notification and full test suite
-→ Validate concurrent withdrawal with MySQL
-→ Add rate limiting and OpenAPI documentation
+Run/fix standard and MySQL test suites
+→ Add rate limiting
+→ Add OpenAPI documentation
+→ Prepare deployment and backup
 ```
