@@ -89,6 +89,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `tests/Feature/BookingStateAndRewardFlowTest.php` covers illegal booking skips, unpaid confirmation, accepted-assignment requirement, completion reward, repeated completion rejection, and existing-ledger reward idempotency.
 - `tests/Feature/PaymentFlowTest.php` covers proof submission, pending booking synchronization, duplicate pending rejection, admin approval, rejection reason validation, resubmission after failure, and repeated verification prevention.
 - `tests/Feature/DriverAssignmentResponseFlowTest.php` covers owned accept/reject, rejection reason validation, repeated response prevention, cross-driver ownership isolation, same-date driver conflict, same-date vehicle conflict, and different-date acceptance.
+- `tests/Feature/ParticipantAllocationFlowTest.php` covers accepted-assignment allocation, vehicle capacity, reallocation without duplicate rows, cross-booking participant/assignment isolation, final-booking rejection, and unallocated participant reporting.
 - Payment test fixtures that create a payment directly must synchronize `bookings.payment_status` with the created payment status, matching the real API transaction.
 - Booking completion assertions verify driver available balance and exactly one booking CREDIT ledger entry.
 - Payment tests use fake public storage and verify the submitted proof path exists.
@@ -102,6 +103,7 @@ customer creates booking
 → admin approves payment and confirms booking
 → admin assigns driver/vehicle
 → driver accepts
+→ admin allocates participants within vehicle capacity
 → admin starts and completes booking
 → accepted driver receives points once
 → driver submits withdrawal
@@ -115,6 +117,8 @@ customer creates booking
 POST  /api/v1/customer/bookings/{booking}/payments
 PATCH /api/v1/admin/payments/{payment}/verification
 PATCH /api/v1/admin/bookings/{booking}/status
+GET   /api/v1/admin/bookings/{booking}/participant-allocations
+PUT   /api/v1/admin/bookings/{booking}/participant-allocations
 GET   /api/v1/driver/assignments
 GET   /api/v1/driver/assignments/{driverAssignment}
 PATCH /api/v1/driver/assignments/{driverAssignment}/accept
@@ -130,6 +134,7 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 ## Latest relevant commits
 
+- `776fafd9f1ece0345ef658e28e656ade21c037ac` — participant allocation, capacity, reallocation, isolation, final-state, and unallocated-list feature tests.
 - `4161ee4f890c8df71dc7dc92a963443607ce208c` — assignment accept/reject, ownership, repeated response, and date-conflict feature tests.
 - `13b7f7b7f2842cafa04212ac5254b0f1a8250c79` — synchronize payment test fixture booking status with directly-created payment status.
 - `7927e3e548593ad53d4aefb29823fbcba59f2528` — payment proof, approval, rejection, resubmission, and repeated-verification feature tests.
@@ -140,9 +145,9 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 - User ran `PaymentFlowTest`: 4 passed and one duplicate-pending test failed because its direct fixture created a pending payment while leaving the booking unpaid.
 - The payment fixture was corrected; the updated payment test still needs to be rerun locally.
-- The assignment response tests were added but not executed in this environment because the GitHub connector has no PHP runtime.
-- No migration was required for the assignment tests.
-- Participant allocation/capacity and true concurrent withdrawal tests remain to be added.
+- Assignment and participant allocation tests were added but not executed in this environment because the GitHub connector has no PHP runtime.
+- No migration was required for these feature tests.
+- True concurrent withdrawal tests remain; these should use a MySQL testing database because SQLite does not represent `lockForUpdate()` behavior accurately.
 - Run locally:
 
 ```powershell
@@ -150,6 +155,7 @@ php artisan optimize:clear
 php artisan migrate
 php artisan test --filter=PaymentFlowTest
 php artisan test --filter=DriverAssignmentResponseFlowTest
+php artisan test --filter=ParticipantAllocationFlowTest
 php artisan test --filter=DriverWithdrawalFlowTest
 php artisan test --filter=BookingStateAndRewardFlowTest
 php artisan test
@@ -157,12 +163,17 @@ php artisan test
 
 ## Next progress list
 
-### Priority 1 — Remaining critical feature tests
+### Priority 1 — Test execution and remaining financial concurrency
 
-- participant allocation and vehicle capacity
-- concurrent withdrawal protection
+- run and fix all current critical tests
+- concurrent withdrawal protection using MySQL test database
 
-### Priority 2 — Production hardening
+### Priority 2 — Missing MVP operations
+
+- driver-owned vehicle create/update/delete and document/photo management
+- active-assignment deletion guards and re-verification rules
+
+### Priority 3 — Production hardening
 
 - audit logs
 - notifications and queues
@@ -172,7 +183,7 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Run/fix assignment tests locally
-→ Add participant allocation/capacity tests
+Run/fix participant allocation and full test suite
+→ Add driver-owned vehicle management
 → Audit logs and notifications
 ```
