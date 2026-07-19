@@ -87,7 +87,9 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 
 - `tests/Feature/DriverWithdrawalFlowTest.php` covers withdrawal request, insufficient balance, HOLD, RELEASE, DEBIT, and strict withdrawal transitions.
 - `tests/Feature/BookingStateAndRewardFlowTest.php` covers illegal booking skips, unpaid confirmation, accepted-assignment requirement, completion reward, repeated completion rejection, and existing-ledger reward idempotency.
+- `tests/Feature/PaymentFlowTest.php` covers proof submission, pending booking synchronization, duplicate pending rejection, admin approval, rejection reason validation, resubmission after failure, and repeated verification prevention.
 - Booking completion assertions verify driver available balance and exactly one booking CREDIT ledger entry.
+- Payment tests use fake public storage and verify the submitted proof path exists.
 - Tests use SQLite in-memory through the existing `phpunit.xml` configuration and Laravel `RefreshDatabase`.
 
 ## Current expected end-to-end flow
@@ -108,6 +110,8 @@ customer creates booking
 ## Current relevant endpoints
 
 ```text
+POST  /api/v1/customer/bookings/{booking}/payments
+PATCH /api/v1/admin/payments/{payment}/verification
 PATCH /api/v1/admin/bookings/{booking}/status
 GET   /api/v1/driver/points/summary
 GET   /api/v1/driver/points/ledger
@@ -120,6 +124,7 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 ## Latest relevant commits
 
+- `7927e3e548593ad53d4aefb29823fbcba59f2528` — payment proof, approval, rejection, resubmission, and repeated-verification feature tests.
 - `7ca1a01876bd928e801d792258cb85228640abbf` — booking state-machine and completion reward idempotency feature tests.
 - `41ee6aecfb0b538c2f61def9288ed97c33830de2` — withdrawal feature tests for hold, release, debit, balance validation, and strict transitions.
 - `721b42f7a9aa562e40539782f4cd440e8d689c4a` — expose points and withdrawal routes.
@@ -131,7 +136,7 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 - The feature tests were added but were not executed in this environment because no local PHP/Laravel runtime is available through the GitHub connector.
 - No migration was required for these tests.
-- Payment approval/resubmission, assignment response/conflict, participant allocation/capacity, and true concurrent withdrawal tests remain to be added.
+- Assignment response/conflict, participant allocation/capacity, and true concurrent withdrawal tests remain to be added.
 - Run locally:
 
 ```powershell
@@ -139,6 +144,7 @@ php artisan optimize:clear
 php artisan migrate
 php artisan test --filter=DriverWithdrawalFlowTest
 php artisan test --filter=BookingStateAndRewardFlowTest
+php artisan test --filter=PaymentFlowTest
 php artisan test
 ```
 
@@ -146,7 +152,6 @@ php artisan test
 
 ### Priority 1 — Remaining critical feature tests
 
-- payment approval and resubmission
 - assignment accept/reject and date conflict
 - participant allocation and vehicle capacity
 - concurrent withdrawal protection
@@ -162,6 +167,6 @@ php artisan test
 
 ```text
 Run/fix current feature tests locally
-→ Add payment/assignment/allocation tests
+→ Add assignment/allocation tests
 → Audit logs and notifications
 ```
