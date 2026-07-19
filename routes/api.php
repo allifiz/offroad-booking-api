@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Admin\DriverVehicleVerificationController;
 use App\Http\Controllers\Api\V1\Admin\DriverVerificationController;
 use App\Http\Controllers\Api\V1\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\V1\Admin\TourPackageController as AdminTourPackageController;
+use App\Http\Controllers\Api\V1\Admin\TravelGroupController;
 use App\Http\Controllers\Api\V1\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
@@ -50,11 +51,9 @@ Route::prefix('v1')->group(function (): void {
         ->group(function (): void {
             Route::get('/profile', [CustomerProfileController::class, 'show']);
             Route::patch('/profile', [CustomerProfileController::class, 'update']);
-
             Route::get('/bookings', [BookingController::class, 'index']);
             Route::post('/bookings', [BookingController::class, 'store']);
             Route::get('/bookings/{booking}', [BookingController::class, 'show']);
-
             Route::get('/payments', [PaymentController::class, 'index']);
             Route::post('/bookings/{booking}/payments', [PaymentController::class, 'store']);
             Route::get('/payments/{payment}', [PaymentController::class, 'show']);
@@ -70,7 +69,6 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/vehicles/{vehicle}', [DriverDashboardController::class, 'showVehicle']);
             Route::post('/documents/{driverDocument}/reupload', [DriverDocumentController::class, 'reuploadDriverDocument']);
             Route::post('/vehicles/{vehicle}/documents/{vehicleDocument}/reupload', [DriverDocumentController::class, 'reuploadVehicleDocument']);
-
             Route::get('/assignments', [DriverAssignmentResponseController::class, 'index']);
             Route::get('/assignments/{driverAssignment}', [DriverAssignmentResponseController::class, 'show']);
             Route::patch('/assignments/{driverAssignment}/accept', [DriverAssignmentResponseController::class, 'accept']);
@@ -82,7 +80,6 @@ Route::prefix('v1')->group(function (): void {
         ->group(function (): void {
             Route::apiResource('tour-packages', AdminTourPackageController::class);
             Route::apiResource('vehicles', AdminVehicleController::class);
-
             Route::get('drivers', [DriverVerificationController::class, 'index']);
             Route::get('drivers/{driverProfile}', [DriverVerificationController::class, 'show']);
             Route::patch('drivers/{driverProfile}/verification', [DriverVerificationController::class, 'update']);
@@ -95,6 +92,13 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus']);
             Route::post('bookings/{booking}/driver-assignments', [DriverAssignmentController::class, 'store']);
             Route::patch('bookings/{booking}/driver-assignments/{driverAssignment}/cancel', [DriverAssignmentController::class, 'cancel']);
+
+            Route::get('travel-groups', [TravelGroupController::class, 'index']);
+            Route::post('travel-groups', [TravelGroupController::class, 'store']);
+            Route::get('travel-groups/{travelGroup}', [TravelGroupController::class, 'show']);
+            Route::post('travel-groups/{travelGroup}/bookings', [TravelGroupController::class, 'attachBooking']);
+            Route::get('bookings/{booking}/participant-allocations', [TravelGroupController::class, 'allocations']);
+            Route::put('bookings/{booking}/participant-allocations', [TravelGroupController::class, 'allocateParticipant']);
 
             Route::get('payments', [AdminPaymentController::class, 'index']);
             Route::get('payments/{payment}', [AdminPaymentController::class, 'show']);
