@@ -68,7 +68,10 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('/profile', [DriverDashboardController::class, 'updateProfile']);
             Route::patch('/availability', [DriverDashboardController::class, 'updateAvailability']);
             Route::get('/vehicles', [DriverDashboardController::class, 'vehicles']);
+            Route::post('/vehicles', [DriverDashboardController::class, 'storeVehicle']);
             Route::get('/vehicles/{vehicle}', [DriverDashboardController::class, 'showVehicle']);
+            Route::patch('/vehicles/{vehicle}', [DriverDashboardController::class, 'updateVehicle']);
+            Route::delete('/vehicles/{vehicle}', [DriverDashboardController::class, 'destroyVehicle']);
             Route::post('/documents/{driverDocument}/reupload', [DriverDocumentController::class, 'reuploadDriverDocument']);
             Route::post('/vehicles/{vehicle}/documents/{vehicleDocument}/reupload', [DriverDocumentController::class, 'reuploadVehicleDocument']);
             Route::get('/assignments', [DriverAssignmentResponseController::class, 'index']);
