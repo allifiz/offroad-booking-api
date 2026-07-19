@@ -40,42 +40,27 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Driver and vehicle registration start pending/unavailable.
 - Admin verifies drivers, vehicles, driver documents, and vehicle documents.
 - Driver-owned vehicles are always created with ownership `driver`, verification `pending`, and availability `unavailable`.
-- Changing vehicle identity/capacity, adding/replacing a vehicle document, or adding/deleting a vehicle photo resets vehicle verification to pending and availability to unavailable.
-- Vehicle document type is unique per vehicle; uploading the same type replaces the previous file after the new file is safely stored.
-- Vehicle photos use types: `front`, `back`, `left`, `right`, `interior`, or `other`.
-- Reordering photos does not reset verification because it does not change media content.
+- Vehicle identity/capacity or media-content changes reset verification to pending and availability to unavailable.
 - Vehicles with offered or accepted assignments cannot be deleted.
 - Admin offers assignments; drivers accept or reject them.
-- Availability does not automatically change when an assignment is accepted.
-- Conflicts use accepted assignments on the same tour date.
+- Assignment conflicts use accepted assignments on the same tour date.
 - Assignment creation requires a paid booking.
 - Booking transitions are strict: pending → confirmed/cancelled, confirmed → ongoing/cancelled, ongoing → completed, completed/cancelled final.
 - Participant allocation targets accepted assignments from the same booking and may not exceed vehicle capacity.
 - Completing a booking awards each accepted driver configurable points once per booking.
 - Withdrawal creation moves available points to held; rejection releases them; paid removes them from held.
+- Sensitive model create/update/delete operations are automatically audited.
+- Audit logs record actor, subject, old/new values, IP, user agent, URL, and request method.
+- Password, token, and stored-file path fields are excluded from audit payloads.
+- Audit logs are read-only through admin endpoints; no update/delete API is exposed.
 
 ## Implemented progress
 
 ### Foundation and actors
 
 - Laravel 13 + MySQL/MariaDB, Sanctum, role middleware, tour packages, vehicles.
-- Driver registration, verification, dashboard, availability, documents, and document re-upload.
+- Driver registration, verification, dashboard, availability, documents, vehicle CRUD/media, and document re-upload.
 - Customer registration/profile, bookings, participants, and ownership isolation.
-
-### Driver-owned vehicle management
-
-- Driver can list, create, view, update, and delete owned vehicles.
-- Cross-driver vehicle access returns `404`.
-- Create forces `ownership_type=driver`, `verification_status=pending`, and `status=unavailable`.
-- Plate numbers remain globally unique.
-- Changes to name, plate, brand, model, year, or capacity reset verification metadata and availability.
-- Notes-only updates do not trigger re-verification.
-- Delete is blocked while offered or accepted assignments exist.
-- Driver can upload or replace one document per document type.
-- Document replacement resets document and vehicle verification and deletes the previous public file after success.
-- Driver can upload vehicle photos, reorder owned photos, and delete owned photos.
-- Adding or deleting a photo resets vehicle verification; reordering alone does not.
-- Registration vehicle photos now write to the real `vehicle_photos.type` column instead of the invalid `photo_type` key.
 
 ### Booking transaction flow
 
@@ -89,6 +74,14 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Admin strict withdrawal processing: pending → approved/rejected, approved → paid.
 - Balance mutations use transactions and row locks.
 
+### Audit logs
+
+- `audit_logs` stores actor, event, polymorphic subject, old/new JSON, IP, user-agent, URL, method, and timestamps.
+- Central `AuditObserver` records created, updated, and deleted events without duplicating controller logic.
+- Observed models: Booking, participant allocation, driver assignment/document/profile, Payment, TravelGroup, Vehicle, VehicleDocument, VehiclePhoto, and Withdrawal.
+- Admin can paginate and filter logs by event, actor, subject type/id, and date range.
+- Admin can view one audit-log detail.
+
 ### Critical feature tests
 
 - `DriverWithdrawalFlowTest`
@@ -97,59 +90,53 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `DriverAssignmentResponseFlowTest`
 - `ParticipantAllocationFlowTest`
 - `DriverVehicleCrudFlowTest`
-- `VehicleMediaFlowTest` covers document upload/replacement, old-file cleanup, vehicle verification reset, photo upload/reorder/delete, storage cleanup, invalid photo type, cross-driver isolation, and cross-vehicle reorder rejection.
+- `VehicleMediaFlowTest`
+- `AuditLogFlowTest` covers automatic actor/request logging, old/new values, sensitive-field exclusion, admin filtering/detail, and non-admin denial.
 - Tests use SQLite in-memory and `RefreshDatabase`; true locking/concurrency must be validated with MySQL.
 
 ## Current relevant endpoints
 
 ```text
-GET    /api/v1/driver/vehicles
-POST   /api/v1/driver/vehicles
-GET    /api/v1/driver/vehicles/{vehicle}
-PATCH  /api/v1/driver/vehicles/{vehicle}
-DELETE /api/v1/driver/vehicles/{vehicle}
-POST   /api/v1/driver/vehicles/{vehicle}/documents
-POST   /api/v1/driver/vehicles/{vehicle}/documents/{vehicleDocument}/reupload
-POST   /api/v1/driver/vehicles/{vehicle}/photos
-PUT    /api/v1/driver/vehicles/{vehicle}/photos/order
-DELETE /api/v1/driver/vehicles/{vehicle}/photos/{vehiclePhoto}
+GET /api/v1/admin/audit-logs
+GET /api/v1/admin/audit-logs/{auditLog}
 ```
 
 All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
-- `dc274d3b2ad8007bceea41bb7a30b48550ffe15f` — vehicle media feature tests for replacement, cleanup, ownership, reorder, deletion, and verification reset.
-- `13218a9fdc1671854f983c87354d1209a3dbf931` — expose driver vehicle document/photo management routes.
-- `9d0a01e0112e2f95fa6c7fe213fddf7dd3ff77ad` — fix registration vehicle photo column mapping.
-- `29ebabad2bbbf858db3c111524dc7973a0e77e01` — driver vehicle document upload/replacement and photo upload/delete/order management.
-- `0d7a59596637c25f4ac450604972ccbdabd6136c` — driver vehicle CRUD feature tests.
+- `a92900d5a7a52a3a95a4faabf29aba28a81c4830` — audit log feature tests.
+- `3c1ab30c2063b7447715d188c02d7707fb4d42a0` — expose admin audit-log endpoints.
+- `02083801ae17ac68634f6cf46fb9bc82cf26917c` — admin audit-log list/detail controller.
+- `a47d1f03e6135a34aa6d615653e3836f89df27aa` — register centralized observer for sensitive models.
+- `0063fa5cbd4d82c3d805b2d38f72df8c12e7e552` — centralized audit observer.
+- `e0a38994cd1d0aec06ff6dcd987b1bd5ef40f184` — audit log model.
+- `ec4ab183754a2c9a1ceacc627dbd5dabf67e7a05` — audit logs migration.
 
 ## Verification status and limitations
 
-- Runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
-- No migration was required for vehicle document/photo management or its tests.
-- Existing driver registration tests should be rerun because the photo field mapping was corrected.
+- Audit-log runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
+- The audit feature requires the new `audit_logs` migration.
+- Audit logs currently track model-level create/update/delete; custom semantic event names such as `payment.approved` can be added later if reporting requires them.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
-php artisan route:list --path=api/v1/driver/vehicles
-php artisan test --filter=VehicleMediaFlowTest
-php artisan test --filter=DriverVehicleCrudFlowTest
+php artisan migrate
+php artisan route:list --path=api/v1/admin/audit-logs
+php artisan test --filter=AuditLogFlowTest
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Test execution and concurrency
+### Priority 1 — Verification and concurrency
 
-- run/fix vehicle media and full current test suite
-- concurrent withdrawal protection using MySQL test database
+- run/fix `AuditLogFlowTest` and full test suite
+- validate concurrent withdrawal protection using a MySQL test database
 
 ### Priority 2 — Production hardening
 
-- audit logs
 - notifications and queues
 - rate limiting and OpenAPI documentation
 - reports, backup, deployment, and client integration
@@ -157,7 +144,7 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Run/fix VehicleMediaFlowTest and full test suite
+Run/fix AuditLogFlowTest and full suite
 → Validate concurrent withdrawal with MySQL
-→ Add audit logs and notifications
+→ Add notifications and queues
 ```
