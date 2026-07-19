@@ -7,10 +7,9 @@ use App\Enums\WithdrawalStatus;
 use App\Http\Controllers\Controller;
 use App\Models\PointLedger;
 use App\Models\Withdrawal;
+use App\Services\WithdrawalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class DriverPointController extends Controller
 {
@@ -71,8 +70,11 @@ class DriverPointController extends Controller
         return response()->json(['success' => true, 'data' => $items]);
     }
 
-    public function requestWithdrawal(Request $request): JsonResponse
+    public function requestWithdrawal(Request $request, WithdrawalService $withdrawalService): JsonResponse
     {
+        $profile = $request->user()->driverProfile;
+        abort_unless($profile, 404);
+
         $validated = $request->validate([
             'points' => ['required', 'integer', 'min:'.config('offroad.minimum_withdrawal_points')],
             'bank_name' => ['required', 'string', 'max:100'],
@@ -80,44 +82,7 @@ class DriverPointController extends Controller
             'account_name' => ['required', 'string', 'max:100'],
         ]);
 
-        $withdrawal = DB::transaction(function () use ($request, $validated): Withdrawal {
-            $profile = $request->user()->driverProfile()->lockForUpdate()->firstOrFail();
-
-            if ($profile->available_points < $validated['points']) {
-                throw ValidationException::withMessages([
-                    'points' => ['Saldo poin tersedia tidak mencukupi.'],
-                ]);
-            }
-
-            $profile->decrement('available_points', $validated['points']);
-            $profile->increment('held_points', $validated['points']);
-            $profile->refresh();
-
-            $withdrawal = Withdrawal::query()->create([
-                'driver_profile_id' => $profile->id,
-                'points' => $validated['points'],
-                'amount' => $validated['points'] * config('offroad.rupiah_per_point'),
-                'status' => WithdrawalStatus::PENDING,
-                'bank_name' => $validated['bank_name'],
-                'account_number' => $validated['account_number'],
-                'account_name' => $validated['account_name'],
-                'requested_at' => now(),
-            ]);
-
-            PointLedger::query()->create([
-                'driver_profile_id' => $profile->id,
-                'type' => PointLedgerType::HOLD,
-                'points' => $validated['points'],
-                'available_balance_after' => $profile->available_points,
-                'held_balance_after' => $profile->held_points,
-                'reference_type' => Withdrawal::class,
-                'reference_id' => $withdrawal->id,
-                'description' => 'Poin ditahan untuk pengajuan withdrawal.',
-                'occurred_at' => now(),
-            ]);
-
-            return $withdrawal;
-        });
+        $withdrawal = $withdrawalService->request($profile, $validated);
 
         return response()->json([
             'success' => true,
