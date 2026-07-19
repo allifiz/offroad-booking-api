@@ -186,7 +186,7 @@ class PaymentFlowTest extends TestCase
 
     private function createPayment(Booking $booking, User $customer, PaymentStatus $status): Payment
     {
-        return Payment::query()->create([
+        $payment = Payment::query()->create([
             'booking_id' => $booking->id,
             'customer_id' => $customer->id,
             'amount' => $booking->total_amount,
@@ -195,5 +195,9 @@ class PaymentFlowTest extends TestCase
             'status' => $status,
             'submitted_at' => now(),
         ]);
+
+        $booking->update(['payment_status' => $status]);
+
+        return $payment;
     }
 }
