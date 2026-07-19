@@ -88,6 +88,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `tests/Feature/DriverWithdrawalFlowTest.php` covers withdrawal request, insufficient balance, HOLD, RELEASE, DEBIT, and strict withdrawal transitions.
 - `tests/Feature/BookingStateAndRewardFlowTest.php` covers illegal booking skips, unpaid confirmation, accepted-assignment requirement, completion reward, repeated completion rejection, and existing-ledger reward idempotency.
 - `tests/Feature/PaymentFlowTest.php` covers proof submission, pending booking synchronization, duplicate pending rejection, admin approval, rejection reason validation, resubmission after failure, and repeated verification prevention.
+- `tests/Feature/DriverAssignmentResponseFlowTest.php` covers owned accept/reject, rejection reason validation, repeated response prevention, cross-driver ownership isolation, same-date driver conflict, same-date vehicle conflict, and different-date acceptance.
 - Payment test fixtures that create a payment directly must synchronize `bookings.payment_status` with the created payment status, matching the real API transaction.
 - Booking completion assertions verify driver available balance and exactly one booking CREDIT ledger entry.
 - Payment tests use fake public storage and verify the submitted proof path exists.
@@ -114,6 +115,10 @@ customer creates booking
 POST  /api/v1/customer/bookings/{booking}/payments
 PATCH /api/v1/admin/payments/{payment}/verification
 PATCH /api/v1/admin/bookings/{booking}/status
+GET   /api/v1/driver/assignments
+GET   /api/v1/driver/assignments/{driverAssignment}
+PATCH /api/v1/driver/assignments/{driverAssignment}/accept
+PATCH /api/v1/driver/assignments/{driverAssignment}/reject
 GET   /api/v1/driver/points/summary
 GET   /api/v1/driver/points/ledger
 GET   /api/v1/driver/withdrawals
@@ -125,25 +130,26 @@ PATCH /api/v1/admin/withdrawals/{withdrawal}
 
 ## Latest relevant commits
 
+- `4161ee4f890c8df71dc7dc92a963443607ce208c` — assignment accept/reject, ownership, repeated response, and date-conflict feature tests.
 - `13b7f7b7f2842cafa04212ac5254b0f1a8250c79` — synchronize payment test fixture booking status with directly-created payment status.
 - `7927e3e548593ad53d4aefb29823fbcba59f2528` — payment proof, approval, rejection, resubmission, and repeated-verification feature tests.
 - `7ca1a01876bd928e801d792258cb85228640abbf` — booking state-machine and completion reward idempotency feature tests.
 - `41ee6aecfb0b538c2f61def9288ed97c33830de2` — withdrawal feature tests for hold, release, debit, balance validation, and strict transitions.
-- `721b42f7a9aa562e40539782f4cd440e8d689c4a` — expose points and withdrawal routes.
-- `402da1025eacc191135e00dd4c1eb60a062360a4` — award points idempotently when a booking is completed.
 
 ## Verification status and limitations
 
 - User ran `PaymentFlowTest`: 4 passed and one duplicate-pending test failed because its direct fixture created a pending payment while leaving the booking unpaid.
-- The fixture was corrected; the updated test still needs to be rerun locally.
-- No migration was required for this test fix.
-- Assignment response/conflict, participant allocation/capacity, and true concurrent withdrawal tests remain to be added.
+- The payment fixture was corrected; the updated payment test still needs to be rerun locally.
+- The assignment response tests were added but not executed in this environment because the GitHub connector has no PHP runtime.
+- No migration was required for the assignment tests.
+- Participant allocation/capacity and true concurrent withdrawal tests remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
 php artisan test --filter=PaymentFlowTest
+php artisan test --filter=DriverAssignmentResponseFlowTest
 php artisan test --filter=DriverWithdrawalFlowTest
 php artisan test --filter=BookingStateAndRewardFlowTest
 php artisan test
@@ -153,7 +159,6 @@ php artisan test
 
 ### Priority 1 — Remaining critical feature tests
 
-- assignment accept/reject and date conflict
 - participant allocation and vehicle capacity
 - concurrent withdrawal protection
 
@@ -167,7 +172,7 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Rerun PaymentFlowTest after pulling fixture fix
-→ Add assignment/allocation tests
+Run/fix assignment tests locally
+→ Add participant allocation/capacity tests
 → Audit logs and notifications
 ```
