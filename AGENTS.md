@@ -40,6 +40,9 @@ Use Indonesian, include ready-to-run PowerShell, importable cURL, expected HTTP 
 - Driver and vehicle registration start pending/unavailable.
 - Admin verifies drivers and driver-owned vehicles.
 - Admin offers assignments; drivers accept or reject them.
+- Driver/vehicle availability does not automatically change when an assignment is accepted.
+- Availability indicates willingness/readiness to receive work; schedule conflicts are determined by accepted assignments on the same tour date.
+- Multiple offers may exist for the same driver/date, but only one conflicting assignment may be accepted.
 - Assignment creation requires a paid booking.
 - Booking cannot become ongoing/completed without paid payment and an accepted assignment.
 - Participant allocation per vehicle remains flexible and controlled by admin.
@@ -85,10 +88,23 @@ Use Indonesian, include ready-to-run PowerShell, importable cURL, expected HTTP 
 - Final booking states cannot be changed.
 - Cancelling a booking cancels active assignments.
 - Admin assigns approved/available driver and driver-owned vehicle.
-- Driver/vehicle schedule conflict checks.
 - Assignment starts as `offered`; admin can cancel it.
 - Assignment requires `booking.payment_status = paid`.
 - `ongoing` and `completed` require payment `paid` and an accepted assignment.
+- Admin offer creation no longer blocks another offer solely because the same driver/vehicle has an offered assignment on that date.
+
+### Driver assignment response
+
+- Driver can list/filter assignments assigned to their own user ID.
+- Driver can view owned assignment detail with booking, package, participants, vehicle, customer, and offer metadata.
+- Driver can accept only an owned `offered` assignment.
+- Driver can reject only an owned `offered` assignment and must provide a rejection reason.
+- Accepted/rejected responses set `responded_at`.
+- Repeated response attempts are rejected.
+- Other drivers receive `404` for inaccessible assignments.
+- Acceptance revalidates driver and vehicle approval/availability.
+- Acceptance rejects driver or vehicle conflicts against other `accepted` assignments on the same tour date.
+- Accepting an assignment does not automatically change driver or vehicle availability.
 
 ### Payment workflow
 
@@ -119,7 +135,7 @@ customer creates booking
 → booking completed
 ```
 
-## New payment endpoints
+## Current relevant endpoints
 
 ```text
 GET   /api/v1/customer/payments
@@ -128,12 +144,19 @@ GET   /api/v1/customer/payments/{payment}
 GET   /api/v1/admin/payments
 GET   /api/v1/admin/payments/{payment}
 PATCH /api/v1/admin/payments/{payment}/verification
+GET   /api/v1/driver/assignments
+GET   /api/v1/driver/assignments/{driverAssignment}
+PATCH /api/v1/driver/assignments/{driverAssignment}/accept
+PATCH /api/v1/driver/assignments/{driverAssignment}/reject
 ```
 
-All endpoints require Sanctum and their respective `customer` or `admin` role.
+All endpoints require Sanctum and their respective role.
 
 ## Latest relevant commits
 
+- `a9acd8a5be926042ee565eda69b289e2e701a782` — expose driver assignment response routes.
+- `132d4d315047909e8d98d8d976df04fe2817daa2` — defer schedule conflicts until assignment acceptance.
+- `6ea879c5aa9c424937b72f83d63be2f893c3ea80` — driver assignment list/detail/accept/reject.
 - `6c15b591c5fe3f46efc42cd6910d56634e4ded62` — expose customer/admin payment routes.
 - `0295e0d910f96dd5a0860dfc17bae667d7a9351d` — admin payment verification.
 - `71753163f7c3b6e3055572f8f46d40d604a4eb51` — customer payment submission/history.
@@ -142,33 +165,20 @@ All endpoints require Sanctum and their respective `customer` or `admin` role.
 
 ## Verification status and limitations
 
-- Runtime tests were not executed in this environment because the repository could not be cloned and no Laravel runtime/database was available.
+- Runtime tests were not executed in this environment because no local Laravel runtime/database was available.
+- No migration was added for driver assignment responses.
+- Automated feature tests specifically for driver assignment responses remain to be added if not already covered locally.
 - Run locally after pulling:
 
 ```powershell
 php artisan optimize:clear
-php artisan migrate
-php artisan storage:link
 php artisan route:list --path=api/v1
 php artisan test
 ```
 
-- Verify MySQL supports the migration and that `storage/app/public` is writable.
-- Automated feature tests specifically for payment submission/verification remain to be added if not already covered locally.
-
 ## Next progress list
 
-### Priority 1 — Driver assignment response API
-
-- driver assignment list/detail
-- accept assignment
-- reject with required reason
-- only assigned driver may respond
-- prevent repeated responses
-- set `responded_at`
-- define availability behavior
-
-### Priority 2 — Driver dashboard/API
+### Priority 1 — Driver dashboard/API
 
 - profile and verification status
 - update allowed fields
@@ -176,7 +186,7 @@ php artisan test
 - availability toggle with rules
 - manage driver-owned vehicles
 
-### Priority 3 — Booking state-machine hardening
+### Priority 2 — Booking state-machine hardening
 
 ```text
 pending → confirmed | cancelled
@@ -187,14 +197,14 @@ completed/cancelled → final
 
 Prevent direct skips, backward transitions, and illegal cancellation.
 
-### Priority 4 — Travel groups and participant allocation
+### Priority 3 — Travel groups and participant allocation
 
 - driver-origin and website-origin groups
 - leader/member management
 - participant-to-vehicle allocation
 - capacity enforcement
 
-### Priority 5 — Points, withdrawal, and production hardening
+### Priority 4 — Points, withdrawal, and production hardening
 
 - point ledger and trip awards
 - held/available balances and withdrawal processing
@@ -203,7 +213,7 @@ Prevent direct skips, backward transitions, and illegal cancellation.
 ## Recommended immediate continuation
 
 ```text
-Driver assignment response API
-→ Driver dashboard
+Driver dashboard
 → Booking state-machine hardening
+→ Travel groups and participant allocation
 ```
