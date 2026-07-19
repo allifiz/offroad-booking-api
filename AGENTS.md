@@ -97,6 +97,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `DriverAssignmentResponseFlowTest`
 - `ParticipantAllocationFlowTest`
 - `DriverVehicleCrudFlowTest`
+- `VehicleMediaFlowTest` covers document upload/replacement, old-file cleanup, vehicle verification reset, photo upload/reorder/delete, storage cleanup, invalid photo type, cross-driver isolation, and cross-vehicle reorder rejection.
 - Tests use SQLite in-memory and `RefreshDatabase`; true locking/concurrency must be validated with MySQL.
 
 ## Current relevant endpoints
@@ -118,39 +119,35 @@ All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
+- `dc274d3b2ad8007bceea41bb7a30b48550ffe15f` — vehicle media feature tests for replacement, cleanup, ownership, reorder, deletion, and verification reset.
 - `13218a9fdc1671854f983c87354d1209a3dbf931` — expose driver vehicle document/photo management routes.
 - `9d0a01e0112e2f95fa6c7fe213fddf7dd3ff77ad` — fix registration vehicle photo column mapping.
 - `29ebabad2bbbf858db3c111524dc7973a0e77e01` — driver vehicle document upload/replacement and photo upload/delete/order management.
 - `0d7a59596637c25f4ac450604972ccbdabd6136c` — driver vehicle CRUD feature tests.
-- `89eb5d2ee2a08fbed92d08154a0b4f6c5a5338c3` — expose driver vehicle CRUD routes.
 
 ## Verification status and limitations
 
 - Runtime tests were not executed in this environment because the GitHub connector has no PHP runtime.
-- No migration was required for vehicle document/photo management.
-- Vehicle media feature tests remain to be added and run locally.
+- No migration was required for vehicle document/photo management or its tests.
 - Existing driver registration tests should be rerun because the photo field mapping was corrected.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan route:list --path=api/v1/driver/vehicles
+php artisan test --filter=VehicleMediaFlowTest
 php artisan test --filter=DriverVehicleCrudFlowTest
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Vehicle media verification
+### Priority 1 — Test execution and concurrency
 
-- add feature tests for document replacement, file cleanup, photo ownership, reorder, deletion, and verification reset
-- run/fix full current test suite
-
-### Priority 2 — Test execution and concurrency
-
+- run/fix vehicle media and full current test suite
 - concurrent withdrawal protection using MySQL test database
 
-### Priority 3 — Production hardening
+### Priority 2 — Production hardening
 
 - audit logs
 - notifications and queues
@@ -160,7 +157,7 @@ php artisan test
 ## Recommended immediate continuation
 
 ```text
-Run vehicle media and full test suite
-→ Add vehicle media feature tests
-→ Audit logs and notifications
+Run/fix VehicleMediaFlowTest and full test suite
+→ Validate concurrent withdrawal with MySQL
+→ Add audit logs and notifications
 ```
