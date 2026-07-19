@@ -44,149 +44,114 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Availability indicates readiness to receive work; conflicts use accepted assignments on the same tour date.
 - Multiple offers may exist for the same driver/date, but only one conflicting assignment may be accepted.
 - Assignment creation requires a paid booking.
-- Booking state transitions are strict:
-
-  ```text
-  pending → confirmed | cancelled
-  confirmed → ongoing | cancelled
-  ongoing → completed
-  completed/cancelled → final
-  ```
-
-- Confirming a booking requires payment `paid`.
-- Starting/completing a booking requires payment `paid` and an accepted assignment.
-- Participant allocation remains flexible and controlled by admin.
-- Travel groups can originate from a driver or website.
+- Booking transitions are strict: pending → confirmed/cancelled, confirmed → ongoing/cancelled, ongoing → completed, completed/cancelled final.
+- Confirming requires paid payment; starting/completing requires paid payment and accepted assignment.
+- Travel groups may originate from `driver` or `website`; admin controls operational grouping in MVP.
+- A booking may belong to one travel group through `bookings.travel_group_id`.
+- Participant vehicle allocation is controlled by admin and targets accepted driver assignments from the same booking.
+- One booking participant may have only one current vehicle allocation.
+- Allocated participant count may not exceed the assigned vehicle capacity.
 - Driver points use a ledger; withdrawal holds balance while pending.
-- Re-upload replaces the rejected document file, deletes the old public-disk file after success, resets verification to pending, and clears old reviewer/rejection metadata.
+- Re-upload replaces rejected files, deletes old public files after success, resets status to pending, and clears review metadata.
 
 ## Implemented progress
 
-### Foundation, authentication, and master data
+### Foundation and actors
 
-- Laravel 13 + MySQL/MariaDB, health endpoint, Sanctum login/current-user/logout, and role middleware.
-- Public tour-package list/detail, admin tour-package CRUD, and admin vehicle CRUD.
+- Laravel 13 + MySQL/MariaDB, health endpoint, Sanctum login/current-user/logout, role middleware.
+- Public tour packages, admin package/vehicle CRUD.
+- Driver registration, verification, dashboard, availability, documents, vehicles, and document re-upload.
+- Customer registration/profile, bookings, participants, and ownership isolation.
 
-### Driver registration, verification, and dashboard
+### Booking transaction flow
 
-- Multipart driver registration with profile, documents, driver-owned vehicle, vehicle documents, and photos.
-- Admin driver and vehicle approve/reject.
-- Driver profile/status/detail/update, manual availability, and owned-vehicle list/detail.
-- Driver document and vehicle document verification by admin.
-- Rejection reason is required when an individual document is rejected.
-- Driver may re-upload only an owned rejected document.
-- Re-upload accepts JPG/JPEG/PNG/PDF up to 5 MB, optionally updates document number/expiry, replaces the file, resets status to pending, and clears review metadata.
-- Document and vehicle ownership isolation returns `404`.
+- Payment submission and admin verification.
+- Paid guard before assignment.
+- Admin driver assignment; driver list/detail/accept/reject.
+- Accepted-date conflicts and manual availability rules.
+- Strict booking status state machine.
 
-### Customer, booking, payment, and assignments
+### Travel groups and participant allocation
 
-- Customer registration/profile and owned booking create/list/detail.
-- Server-side booking code, participant count, total calculation, package/date/participant/leader validation.
-- Customer payment proof submission/history/detail; admin payment verification.
-- Paid booking guard before assignment.
-- Admin booking list/detail/status and driver/vehicle assignment.
-- Driver assignment list/detail/accept/reject with repeated-response and accepted-date conflict guards.
-- Booking state machine blocks skips, backward transitions, repeat transitions, and illegal cancellation.
-- `pending → confirmed` requires paid payment.
-- `confirmed → ongoing` and `ongoing → completed` require paid payment and an accepted assignment.
-- Cancelling from pending/confirmed cancels offered or accepted assignments.
+- Existing `travel_groups`, `travel_group_members`, and `bookings.travel_group_id` structures are used.
+- Admin can create/list/detail travel groups with `driver` or `website` source.
+- Group creation supports leader, members, member limit, and notes.
+- Duplicate member IDs are collapsed; leader is inserted as a member and marked `is_leader`.
+- Admin can attach a non-final booking to a travel group.
+- Group member limit is enforced against total booking participant counts when attaching bookings.
+- New `booking_participant_vehicle_allocations` table maps one participant to one accepted assignment.
+- Participant and assignment must belong to the same booking.
+- Only accepted assignments may receive participants.
+- Vehicle capacity is enforced on allocation.
+- Reallocation uses update-or-create, moving a participant from one assignment to another.
+- Admin can view allocations and unallocated participants for a booking.
 
 ## Current expected end-to-end flow
 
 ```text
-customer creates booking (pending/unpaid)
-→ customer uploads payment proof
-→ admin approves payment (paid)
+customer creates booking
+→ uploads payment proof
+→ admin approves payment
 → admin confirms booking
-→ admin assigns driver and vehicle
-→ driver accepts
-→ admin starts booking (ongoing)
+→ admin assigns one or more drivers/vehicles
+→ drivers accept
+→ admin creates/chooses travel group and attaches booking
+→ admin allocates every booking participant to accepted assignments within vehicle capacity
+→ admin starts booking
 → admin completes booking
-```
-
-Document correction flow:
-
-```text
-admin rejects individual document with reason
-→ driver sees rejection in profile/vehicle detail
-→ driver uploads replacement
-→ document becomes pending and old review metadata is cleared
-→ admin approves or rejects again
 ```
 
 ## Current relevant endpoints
 
 ```text
-PATCH /api/v1/admin/bookings/{booking}/status
-GET   /api/v1/driver/profile
-PATCH /api/v1/driver/profile
-PATCH /api/v1/driver/availability
-GET   /api/v1/driver/vehicles
-GET   /api/v1/driver/vehicles/{vehicle}
-POST  /api/v1/driver/documents/{driverDocument}/reupload
-POST  /api/v1/driver/vehicles/{vehicle}/documents/{vehicleDocument}/reupload
-PATCH /api/v1/admin/driver-documents/{driverDocument}/verification
-PATCH /api/v1/admin/driver-vehicles/{vehicle}/documents/{vehicleDocument}/verification
-GET   /api/v1/driver/assignments
-GET   /api/v1/driver/assignments/{driverAssignment}
-PATCH /api/v1/driver/assignments/{driverAssignment}/accept
-PATCH /api/v1/driver/assignments/{driverAssignment}/reject
-GET   /api/v1/customer/payments
-POST  /api/v1/customer/bookings/{booking}/payments
-GET   /api/v1/customer/payments/{payment}
-GET   /api/v1/admin/payments
-GET   /api/v1/admin/payments/{payment}
-PATCH /api/v1/admin/payments/{payment}/verification
+GET  /api/v1/admin/travel-groups
+POST /api/v1/admin/travel-groups
+GET  /api/v1/admin/travel-groups/{travelGroup}
+POST /api/v1/admin/travel-groups/{travelGroup}/bookings
+GET  /api/v1/admin/bookings/{booking}/participant-allocations
+PUT  /api/v1/admin/bookings/{booking}/participant-allocations
 ```
 
 All protected endpoints require Sanctum and the corresponding role.
 
 ## Latest relevant commits
 
-- `65f6db18419a6de046e73623eef231073a732e7c` — enforce strict booking status state machine.
-- `8cbd4bf56685537cba15e86e0373bde89e4278e8` — expose admin document verification and driver re-upload routes.
-- `a1562e452f1fb1561784f1960dd1d0e4b919516c` — admin individual document verification.
-- `22dc8cacd6d64c97a592dea2790f332882dd738a` — rejected driver/vehicle document re-upload.
-- `579544fc19180903597b77da2137c76ee6890206` — driver dashboard routes.
-- `cdf146bab2bb5a8f98fd8e711d0b45172e97dddc` — driver profile, availability, and owned vehicles.
-- `a9acd8a5be926042ee565eda69b289e2e701a782` — driver assignment response routes.
-- `6c15b591c5fe3f46efc42cd6910d56634e4ded62` — payment routes.
+- `d77fbae4bc93fdd8664cf8e92c3277e1be4dd57d` — expose travel group and participant allocation routes.
+- `0b5a19467b1b0e3abd8da8d086966ff716e17edc` — link participants to vehicle allocations.
+- `3c58f843c61b4829bada4cde18306751d56809ee` — travel group and participant allocation API.
+- `670c23e1ca0fcc9973b7a68e186242f465ca1ce2` — participant allocation model.
+- `1cbb8950a321bd05f45927d8fabd97dc64b46755` — participant vehicle allocation migration.
+- `65f6db18419a6de046e73623eef231073a732e7c` — strict booking state machine.
 
 ## Verification status and limitations
 
-- Runtime tests were not executed in this environment because no local Laravel runtime/database was available.
-- No migration was added for booking state-machine hardening.
-- Automated feature tests specifically for all legal/illegal booking transitions remain to be added.
+- Runtime tests were not executed because no local Laravel runtime/database was available here.
+- A migration was added and must be run locally.
+- Automated feature tests for travel groups, capacity, cross-booking ownership, and reallocation remain to be added.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
-php artisan route:list --path=api/v1/admin/bookings
+php artisan migrate
+php artisan route:list --path=api/v1/admin
 php artisan test
 ```
 
 ## Next progress list
 
-### Priority 1 — Travel groups and participant allocation
+### Priority 1 — Points and withdrawal
 
-- driver-origin and website-origin groups
-- leader/member management
-- participant-to-vehicle allocation
-- capacity enforcement
+- point ledger and trip completion awards
+- available/held balances
+- withdrawal request, approve, reject, paid
 
-### Priority 2 — Points and withdrawal
-
-- point ledger and trip awards
-- held/available balances and withdrawal processing
-
-### Priority 3 — Production hardening
+### Priority 2 — Production hardening
 
 - reports, notifications, queues, audit logs, rate limiting, API docs, backup, deployment, and client integration
 
 ## Recommended immediate continuation
 
 ```text
-Travel groups and participant allocation
-→ Points and withdrawal
+Points and withdrawal
 → Production hardening
 ```
