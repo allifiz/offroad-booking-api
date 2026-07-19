@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\CustomerProfileController;
 use App\Http\Controllers\Api\V1\CustomerRegistrationController;
 use App\Http\Controllers\Api\V1\DriverAssignmentController as DriverAssignmentResponseController;
+use App\Http\Controllers\Api\V1\DriverDashboardController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\TourPackageController;
@@ -60,6 +61,12 @@ Route::prefix('v1')->group(function (): void {
     Route::prefix('driver')
         ->middleware(['auth:sanctum', 'role:driver'])
         ->group(function (): void {
+            Route::get('/profile', [DriverDashboardController::class, 'showProfile']);
+            Route::patch('/profile', [DriverDashboardController::class, 'updateProfile']);
+            Route::patch('/availability', [DriverDashboardController::class, 'updateAvailability']);
+            Route::get('/vehicles', [DriverDashboardController::class, 'vehicles']);
+            Route::get('/vehicles/{vehicle}', [DriverDashboardController::class, 'showVehicle']);
+
             Route::get('/assignments', [DriverAssignmentResponseController::class, 'index']);
             Route::get('/assignments/{driverAssignment}', [DriverAssignmentResponseController::class, 'show']);
             Route::patch('/assignments/{driverAssignment}/accept', [DriverAssignmentResponseController::class, 'accept']);
