@@ -9,7 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -66,24 +66,33 @@ class BookingController extends Controller
             'status' => ['required', 'string', 'in:'.implode(',', array_column(BookingStatus::cases(), 'value'))],
         ]);
 
+        $currentStatus = $booking->status;
         $nextStatus = BookingStatus::from($validated['status']);
+        $allowedTransitions = [
+            BookingStatus::PENDING->value => [BookingStatus::CONFIRMED, BookingStatus::CANCELLED],
+            BookingStatus::CONFIRMED->value => [BookingStatus::ONGOING, BookingStatus::CANCELLED],
+            BookingStatus::ONGOING->value => [BookingStatus::COMPLETED],
+            BookingStatus::COMPLETED->value => [],
+            BookingStatus::CANCELLED->value => [],
+        ];
 
-        if ($booking->status === BookingStatus::COMPLETED || $booking->status === BookingStatus::CANCELLED) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Status booking final tidak dapat diubah.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        if (! in_array($nextStatus, $allowedTransitions[$currentStatus->value], true)) {
+            throw ValidationException::withMessages([
+                'status' => ["Transisi status dari {$currentStatus->value} ke {$nextStatus->value} tidak diizinkan."],
+            ]);
+        }
+
+        if ($nextStatus === BookingStatus::CONFIRMED && $booking->payment_status !== PaymentStatus::PAID) {
+            throw ValidationException::withMessages([
+                'payment_status' => ['Booking harus berstatus paid sebelum dapat dikonfirmasi.'],
+            ]);
         }
 
         if (in_array($nextStatus, [BookingStatus::ONGOING, BookingStatus::COMPLETED], true)) {
             if ($booking->payment_status !== PaymentStatus::PAID) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Pembayaran booking belum selesai.',
-                    'errors' => [
-                        'payment_status' => ['Booking harus berstatus paid sebelum dapat dimulai atau diselesaikan.'],
-                    ],
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                throw ValidationException::withMessages([
+                    'payment_status' => ['Booking harus berstatus paid sebelum dapat dimulai atau diselesaikan.'],
+                ]);
             }
 
             $hasAcceptedAssignment = $booking->driverAssignments()
@@ -91,13 +100,9 @@ class BookingController extends Controller
                 ->exists();
 
             if (! $hasAcceptedAssignment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Booking belum memiliki assignment driver yang diterima.',
-                    'errors' => [
-                        'status' => ['Driver harus menerima assignment sebelum booking dapat dimulai atau diselesaikan.'],
-                    ],
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                throw ValidationException::withMessages([
+                    'status' => ['Driver harus menerima assignment sebelum booking dapat dimulai atau diselesaikan.'],
+                ]);
             }
         }
 
