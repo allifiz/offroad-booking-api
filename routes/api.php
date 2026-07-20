@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\DriverAssignmentController;
 use App\Http\Controllers\Api\V1\Admin\DriverVehicleVerificationController;
 use App\Http\Controllers\Api\V1\Admin\DriverVerificationController;
 use App\Http\Controllers\Api\V1\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Api\V1\Admin\ReportExportController;
 use App\Http\Controllers\Api\V1\Admin\TourPackageController as AdminTourPackageController;
 use App\Http\Controllers\Api\V1\Admin\TravelGroupController;
 use App\Http\Controllers\Api\V1\Admin\VehicleController as AdminVehicleController;
@@ -107,6 +108,12 @@ Route::prefix('v1')->group(function (): void {
         ->middleware(['auth:sanctum', 'role:admin'])
         ->group(function (): void {
             Route::get('dashboard', [DashboardController::class, 'show'])->middleware('throttle:authenticated-read');
+            Route::prefix('reports/export')->middleware('throttle:authenticated-read')->group(function (): void {
+                Route::get('bookings', [ReportExportController::class, 'bookings']);
+                Route::get('payments', [ReportExportController::class, 'payments']);
+                Route::get('drivers', [ReportExportController::class, 'drivers']);
+                Route::get('withdrawals', [ReportExportController::class, 'withdrawals']);
+            });
             Route::get('audit-logs', [AuditLogController::class, 'index'])->middleware('throttle:authenticated-read');
             Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show'])->middleware('throttle:authenticated-read');
 
