@@ -15,6 +15,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  openapi-lint:
+    name: OpenAPI lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate OpenAPI document
+        run: npx --yes @redocly/cli@latest lint docs/openapi.yaml
+
   sqlite-feature-tests:
     name: SQLite feature suite
     runs-on: ubuntu-latest
