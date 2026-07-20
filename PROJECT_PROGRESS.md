@@ -9,59 +9,63 @@ Local path: `C:\Projects\offroad-booking-api`
 
 - Backend core MVP: approximately 99%.
 - Backend production readiness: approximately 97%.
-- Laravel admin web: authentication, dashboard, payment verification, booking operations, lifecycle completion, participant allocation, driver/vehicle verification, and withdrawal processing implemented.
+- Laravel admin web: core operational modules implemented, including reports and audit logs.
 
-## Shared lifecycle services
-
-Canonical services:
-
-```text
-app/Services/BookingLifecycleService.php
-app/Services/WithdrawalService.php
-```
-
-`WithdrawalService` now handles:
-
-- driver withdrawal requests
-- pending to approved/rejected transitions
-- approved to paid transition
-- row locking on withdrawal and driver profile
-- transaction retry up to three times
-- held-point release after rejection
-- held-point debit after payment
-- HOLD, RELEASE, and DEBIT point-ledger entries
-
-Both API and Admin Web use the same withdrawal transition implementation.
-
-## Admin withdrawal operations
+## Admin reports
 
 Routes:
 
 ```text
-GET   /admin/withdrawals
-GET   /admin/withdrawals/{withdrawal}
-PATCH /admin/withdrawals/{withdrawal}
+GET /admin/reports
+GET /admin/reports/export/bookings
+GET /admin/reports/export/payments
+GET /admin/reports/export/drivers
+GET /admin/reports/export/withdrawals
 ```
 
 Implemented:
 
-- withdrawal queue with status filter
-- search by driver name or email
-- payout detail with bank and account data
-- driver available and held balance display
-- approve pending withdrawal
-- reject pending withdrawal with mandatory reason
-- mark approved withdrawal as paid
-- processor and processed timestamp recording
-- safe balance mutation through `WithdrawalService`
+- session-protected report center
+- configurable `date_from` and `date_to`
+- default latest 30 days
+- maximum range 366 days
+- direct CSV downloads for bookings, payments, drivers, and withdrawals
+- reuses the canonical API export controller
+- cursor streaming, UTF-8 BOM, no-store, nosniff, and formula-injection neutralization remain active
 
 Files:
 
 ```text
-app/Http/Controllers/Web/Admin/WithdrawalController.php
-resources/views/admin/withdrawals/index.blade.php
-resources/views/admin/withdrawals/show.blade.php
-tests/Feature/AdminWebWithdrawalFlowTest.php
+app/Http/Controllers/Web/Admin/ReportController.php
+resources/views/admin/reports/index.blade.php
+```
+
+## Admin audit logs
+
+Routes:
+
+```text
+GET /admin/audit-logs
+GET /admin/audit-logs/{auditLog}
+```
+
+Implemented:
+
+- pagination
+- event filtering
+- actor name/email search
+- subject type and ID filtering
+- date filtering
+- request method, URL, IP, and user-agent context
+- formatted before/after JSON detail
+
+Files:
+
+```text
+app/Http/Controllers/Web/Admin/AuditLogController.php
+resources/views/admin/audit-logs/index.blade.php
+resources/views/admin/audit-logs/show.blade.php
+tests/Feature/AdminWebReportsAuditFlowTest.php
 ```
 
 ## Existing production operations
@@ -86,7 +90,7 @@ docs/PRODUCTION_DEPLOYMENT.md
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-CI was confirmed green before the admin withdrawal and WithdrawalService refactor. Do not claim the new web withdrawal test passes until the latest workflow result is confirmed.
+CI was confirmed green before the reports/audit web changes. Do not claim `AdminWebReportsAuditFlowTest` passes until the latest workflow result is confirmed.
 
 ## API documentation
 
@@ -96,10 +100,10 @@ Web-only routes are not part of OpenAPI. Canonical OpenAPI still needs dashboard
 
 ## Next recommended work
 
-1. Inspect and fix any withdrawal CI failure.
-2. Implement reports and audit pages.
-3. Complete canonical OpenAPI coverage.
-4. Start customer web and Flutter driver integration.
+1. Inspect and fix any reports/audit CI failure.
+2. Complete canonical OpenAPI coverage.
+3. Start customer web.
+4. Start Flutter driver integration.
 
 ## Response format rule
 
