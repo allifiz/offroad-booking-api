@@ -37,7 +37,7 @@ class AdminWebWithdrawalFlowTest extends TestCase
             'requested_at' => now(),
         ]);
 
-        $this->actingAs($admin)->get('/admin/withdrawals')->assertOk()->assertSee('Driver Test');
+        $this->actingAs($admin)->get('/admin/withdrawals')->assertOk()->assertSee($driver->name);
         $this->actingAs($admin)->get("/admin/withdrawals/{$withdrawal->id}")->assertOk()->assertSee('BCA');
 
         $this->actingAs($admin)->patch("/admin/withdrawals/{$withdrawal->id}", ['status' => 'approved'])->assertRedirect();
