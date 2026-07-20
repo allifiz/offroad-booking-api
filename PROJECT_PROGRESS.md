@@ -9,10 +9,10 @@ Local path: `C:\Projects\offroad-booking-api`
 
 Estimated progress:
 
-- Core functional MVP: approximately 92–94%
-- Production readiness: approximately 78–82%
+- Core functional MVP: approximately 94–95%
+- Production readiness: approximately 82–85%
 
-The end-to-end core flow is implemented:
+The core end-to-end flow is implemented:
 
 ```text
 customer creates booking
@@ -21,7 +21,7 @@ customer creates booking
 → booking is confirmed
 → admin offers driver assignment
 → driver accepts/rejects
-→ admin allocates participants to accepted vehicles within capacity
+→ admin allocates participants within vehicle capacity
 → booking starts and completes
 → accepted drivers receive points once
 → driver requests withdrawal
@@ -30,91 +30,77 @@ customer creates booking
 
 ## Implemented modules
 
-### Foundation
+### Foundation and actors
 
-- Laravel 13
-- MySQL/MariaDB
+- Laravel 13 + MySQL/MariaDB
 - Laravel Sanctum
 - Role middleware: admin, driver, customer
-- Main branch workflow: direct to `main`
+- Customer registration/profile
+- Driver multipart registration/profile/availability
+- Driver, vehicle, and document verification
 
-### Customer and booking
+### Booking operations
 
-- Customer registration and profile
-- Tour package public API and admin CRUD
-- Booking creation/list/detail
-- Booking participants
-- Ownership isolation
+- Public/admin tour packages
+- Customer booking/list/detail/participants
+- Payment proof submission and admin verification
 - Strict booking state machine
+- Assignment offer and driver accept/reject
+- Same-date driver/vehicle conflict protection
 - Travel groups
 - Participant-to-vehicle allocation
-- Capacity validation and cross-booking isolation
+- Capacity and cross-booking isolation
 
-### Payment
+### Driver vehicle management
 
-- Customer payment proof submission
-- Admin approval/rejection
-- Resubmission after rejection
-- Duplicate pending payment protection
-- Booking payment-status synchronization
-
-### Driver
-
-- Driver multipart registration
-- Driver profile and availability
-- Driver verification
-- Driver document verification/reupload
-- Driver-owned vehicle CRUD
-- Vehicle document upload/replacement
-- Vehicle photo upload, reorder, and delete
-- Vehicle re-verification when sensitive data/media changes
+- Driver-owned vehicle create/update/delete
 - Ownership isolation
+- Sensitive-change re-verification
 - Active-assignment deletion guard
-
-### Assignment
-
-- Admin offers assignments
-- Driver accepts/rejects
-- Rejection reason validation
-- Same-date driver conflict protection
-- Same-date vehicle conflict protection
-- Different-date assignment allowed
+- Vehicle document upload/replacement
+- Vehicle photo upload/reorder/delete
+- Storage cleanup
 
 ### Points and withdrawal
 
-- Configurable trip reward
+- Configurable completion reward
 - Point ledger
-- Available and held balances
-- Withdrawal request/list
-- Admin approve/reject/mark paid
-- HOLD, RELEASE, and DEBIT ledger behavior
-- `WithdrawalService` with database transaction and `lockForUpdate()`
-- Dedicated MySQL concurrent-withdrawal integration test setup
-
-Default configuration:
-
-- 100 points per completed trip
-- 1 point = Rp1,000
-- minimum withdrawal = 100 points
+- Available and held balance
+- Withdrawal HOLD/RELEASE/DEBIT flow
+- Admin approve/reject/paid transitions
+- `WithdrawalService` with transaction, retry, and `lockForUpdate()`
+- Dedicated two-process MySQL concurrent-withdrawal integration test
 
 ### Audit logs
 
-- `audit_logs` migration and model
-- Centralized `AuditObserver`
-- Automatic create/update/delete audit events
-- Actor, subject, old/new values, IP, user-agent, URL, method
-- Sensitive fields and stored file paths excluded
+- Centralized model observer
+- Actor, subject, old/new values, request context
+- Sensitive fields and stored paths excluded
 - Admin read-only list/detail endpoints
 
-### Notifications and queue
+### Notifications and queues
 
-- Database notifications migration
+- Database notifications
 - Queued `OperationalNotification`
 - Dispatch after transaction commit
-- Notifications for payment, booking, assignment, verification, and withdrawal changes
-- Shared authenticated notification inbox
-- Mark one/read all
-- Cross-user ownership isolation
+- Payment, booking, assignment, verification, and withdrawal events
+- Shared authenticated inbox
+- Unread filter, mark one read, mark all read
+
+### API rate limiting
+
+Configured named limiters:
+
+- `auth-login`: 5 requests/minute per normalized email + IP
+- `public-registration`: 3 requests/hour per IP, shared by driver/customer registration
+- `authenticated-read`: 120 requests/minute per user/IP
+- `customer-write`: 20 requests/minute per user/IP
+- `driver-write`: 30 requests/minute per user/IP
+- `file-upload`: 10 requests/minute per user/IP
+- `withdrawal-request`: 3 requests/hour per user/IP
+- `admin-write`: 60 requests/minute per user/IP
+
+Rate middleware is applied based on route risk. Login brute force and shared registration-IP limits are covered by `RateLimitFlowTest`.
 
 ## Critical tests added
 
@@ -127,33 +113,21 @@ Default configuration:
 - `tests/Feature/VehicleMediaFlowTest.php`
 - `tests/Feature/AuditLogFlowTest.php`
 - `tests/Feature/NotificationFlowTest.php`
+- `tests/Feature/RateLimitFlowTest.php`
 - `tests/Integration/MySql/ConcurrentWithdrawalTest.php`
 
-MySQL concurrency support files:
-
-- `app/Services/WithdrawalService.php`
-- internal `withdrawal:attempt` Artisan command
-- `phpunit.mysql.xml`
-
-## Important migrations added
+## Important migrations
 
 - `2026_07_20_000001_create_audit_logs_table.php`
 - `2026_07_20_000002_create_notifications_table.php`
 
-## Current verification status
+Rate limiting requires no migration.
 
-Runtime tests were not executed by the AI environment because the GitHub connector has no local PHP/MySQL runtime.
+## Verification status
 
-Known user-run result before later changes:
+The AI environment cannot execute PHP/MySQL runtime tests. Do not claim the full suite passes until run locally.
 
-- `PaymentFlowTest`: 4 passed, 1 failed due to a fixture mismatch
-- Fixture was fixed afterward, but the updated test result has not yet been confirmed
-
-Therefore, do not claim the full suite passes until the user runs it locally.
-
-## First actions for the next session
-
-Run:
+Run standard suite:
 
 ```powershell
 cd C:\Projects\offroad-booking-api
@@ -161,36 +135,35 @@ git switch main
 git pull origin main
 php artisan optimize:clear
 php artisan migrate
+php artisan test --filter=RateLimitFlowTest
 php artisan test
 ```
 
-Then run MySQL concurrency test separately against the dedicated test database:
+Run MySQL concurrency separately:
 
 ```powershell
 php artisan test tests/Integration/MySql/ConcurrentWithdrawalTest.php --configuration=phpunit.mysql.xml --stop-on-failure
 ```
 
-Dedicated database expected by default:
+Dedicated MySQL database default:
 
 ```text
 offroad_booking_test
-host 127.0.0.1
-port 3306
-user root
-password empty
+127.0.0.1:3306
+root
+empty password
 ```
 
-Never point `phpunit.mysql.xml` to development or production because the test performs `migrate:fresh`.
+Never point `phpunit.mysql.xml` at development or production because it runs `migrate:fresh`.
 
 ## Next recommended work
 
-1. Run and fix the full test suite.
-2. Run and fix the MySQL concurrent-withdrawal integration test.
-3. Add rate limiting for login, registration, uploads, withdrawal, and sensitive admin endpoints.
-4. Add OpenAPI documentation.
-5. Configure production queue worker/supervision.
-6. Add reporting/dashboard metrics.
-7. Prepare backup, deployment, monitoring, and client integration.
+1. Run and fix the standard full test suite.
+2. Run and fix the dedicated MySQL concurrency suite.
+3. Add OpenAPI documentation.
+4. Configure production queue worker and supervision.
+5. Add reports/dashboard metrics.
+6. Prepare backup, deployment, monitoring, and frontend/Flutter integration.
 
 ## Response format rule
 
@@ -204,6 +177,9 @@ After every backend change, answer in this exact order:
 
 Use Indonesian, PowerShell-ready commands, complete cURL flow where relevant, migration/test status, and latest commit SHA.
 
-## Latest checkpoint commit before this file
+## Latest rate-limit commits
 
-`f96853e69e4ee707cd51e58940e2a1e6a17794b8`
+- `615d775963c0a6ab5c372221af0794c17b4b9747` — configure named API rate limiters
+- `8b2b92e8cef1f2a5c16ea640ae103eaf0794cb45` — apply risk-based route middleware
+- `e20b6c716142e4420a43be4453ebbee3e3fbe7f7` — add rate-limit feature tests
+- `f0aa9b83687a6f41948e21b979deaab2428c46a1` — update AGENTS.md progress
