@@ -1,0 +1,753 @@
+openapi: 3.1.0
+info:
+  title: Offroad Booking API
+  version: 1.0.0
+  description: |
+    REST API untuk customer, driver, dan admin pada platform booking wisata offroad.
+    Semua endpoint terlindungi memakai Laravel Sanctum Bearer token kecuali endpoint publik.
+servers:
+  - url: http://127.0.0.1:8000/api/v1
+    description: Local development
+security:
+  - sanctum: []
+tags:
+  - name: Public
+  - name: Auth
+  - name: Notifications
+  - name: Customer
+  - name: Driver
+  - name: Admin
+paths:
+  /health:
+    get:
+      tags: [Public]
+      security: []
+      summary: Health check API
+      responses:
+        '200':
+          description: API berjalan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /tour-packages:
+    get:
+      tags: [Public]
+      security: []
+      summary: Daftar paket wisata aktif
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /tour-packages/{tourPackage}:
+    get:
+      tags: [Public]
+      security: []
+      summary: Detail paket wisata
+      parameters:
+        - $ref: '#/components/parameters/TourPackageId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login user dan membuat Sanctum token
+      description: Maksimal 5 request per menit untuk kombinasi email dan IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                device_name: { type: string, example: postman }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Profil user yang sedang login
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Menghapus token aktif
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /customers/register:
+    post:
+      tags: [Customer]
+      security: []
+      summary: Registrasi customer
+      description: Berbagi limit 3 request per jam per IP dengan registrasi driver.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistrationRequest'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /driver/register:
+    post:
+      tags: [Driver]
+      security: []
+      summary: Registrasi driver multipart beserta dokumen dan kendaraan
+      description: Berbagi limit 3 request per jam per IP dengan registrasi customer.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, email, phone, password, identity_number, license_number, address, date_of_birth, profile_photo]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                phone: { type: string }
+                password: { type: string, format: password }
+                identity_number: { type: string }
+                license_number: { type: string }
+                address: { type: string }
+                date_of_birth: { type: string, format: date }
+                profile_photo: { type: string, format: binary }
+                driver_documents: { type: array, items: { type: object } }
+                vehicle: { type: object }
+                vehicle_documents: { type: array, items: { type: object } }
+                vehicle_photos: { type: array, items: { type: string, format: binary } }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Inbox notifikasi user
+      parameters:
+        - in: query
+          name: unread_only
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Tandai semua notifikasi sebagai dibaca
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /notifications/{notification}/read:
+    patch:
+      tags: [Notifications]
+      summary: Tandai satu notifikasi milik user sebagai dibaca
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /customer/profile:
+    get:
+      tags: [Customer]
+      summary: Profil customer
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    patch:
+      tags: [Customer]
+      summary: Perbarui profil customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /customer/bookings:
+    get:
+      tags: [Customer]
+      summary: Riwayat booking customer
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    post:
+      tags: [Customer]
+      summary: Membuat booking dan peserta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /customer/bookings/{booking}:
+    get:
+      tags: [Customer]
+      summary: Detail booking milik customer
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /customer/bookings/{booking}/payments:
+    post:
+      tags: [Customer]
+      summary: Upload bukti pembayaran
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [amount, method, proof]
+              properties:
+                amount: { type: number, format: double }
+                method: { type: string }
+                proof: { type: string, format: binary }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /customer/payments:
+    get:
+      tags: [Customer]
+      summary: Daftar pembayaran customer
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /customer/payments/{payment}:
+    get:
+      tags: [Customer]
+      summary: Detail pembayaran customer
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /driver/profile:
+    get:
+      tags: [Driver]
+      summary: Profil driver dan status verifikasi
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    patch:
+      tags: [Driver]
+      summary: Perbarui profil driver
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/availability:
+    patch:
+      tags: [Driver]
+      summary: Ubah status available atau unavailable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [available, unavailable] }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/vehicles:
+    get:
+      tags: [Driver]
+      summary: Daftar kendaraan milik driver
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    post:
+      tags: [Driver]
+      summary: Tambah kendaraan milik driver
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleRequest'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/vehicles/{vehicle}:
+    get:
+      tags: [Driver]
+      summary: Detail kendaraan milik driver
+      parameters:
+        - $ref: '#/components/parameters/VehicleId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Driver]
+      summary: Perbarui kendaraan milik driver
+      parameters:
+        - $ref: '#/components/parameters/VehicleId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleRequest'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Driver]
+      summary: Hapus kendaraan jika tidak memiliki assignment aktif
+      parameters:
+        - $ref: '#/components/parameters/VehicleId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /driver/vehicles/{vehicle}/documents:
+    post:
+      tags: [Driver]
+      summary: Upload atau replace dokumen kendaraan berdasarkan type
+      parameters:
+        - $ref: '#/components/parameters/VehicleId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [type, file]
+              properties:
+                type: { type: string, maxLength: 50 }
+                file: { type: string, format: binary }
+                document_number: { type: string, nullable: true }
+                expires_at: { type: string, format: date, nullable: true }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/vehicles/{vehicle}/photos:
+    post:
+      tags: [Driver]
+      summary: Upload foto kendaraan
+      parameters:
+        - $ref: '#/components/parameters/VehicleId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [type, photo]
+              properties:
+                type: { type: string, enum: [front, back, left, right, interior, other] }
+                photo: { type: string, format: binary }
+                sort_order: { type: integer, minimum: 0 }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/vehicles/{vehicle}/photos/order:
+    put:
+      tags: [Driver]
+      summary: Atur urutan foto kendaraan
+      parameters:
+        - $ref: '#/components/parameters/VehicleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [photos]
+              properties:
+                photos:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [id, sort_order]
+                    properties:
+                      id: { type: integer }
+                      sort_order: { type: integer, minimum: 0 }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/vehicles/{vehicle}/photos/{vehiclePhoto}:
+    delete:
+      tags: [Driver]
+      summary: Hapus foto kendaraan
+      parameters:
+        - $ref: '#/components/parameters/VehicleId'
+        - $ref: '#/components/parameters/VehiclePhotoId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /driver/assignments:
+    get:
+      tags: [Driver]
+      summary: Daftar assignment driver
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /driver/assignments/{driverAssignment}:
+    get:
+      tags: [Driver]
+      summary: Detail assignment driver
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /driver/assignments/{driverAssignment}/accept:
+    patch:
+      tags: [Driver]
+      summary: Terima assignment
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/assignments/{driverAssignment}/reject:
+    patch:
+      tags: [Driver]
+      summary: Tolak assignment
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rejection_reason]
+              properties:
+                rejection_reason: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/points/summary:
+    get:
+      tags: [Driver]
+      summary: Ringkasan saldo poin driver
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /driver/points/ledger:
+    get:
+      tags: [Driver]
+      summary: Riwayat ledger poin
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string }
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /driver/withdrawals:
+    get:
+      tags: [Driver]
+      summary: Riwayat withdrawal driver
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [pending, approved, rejected, paid] }
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    post:
+      tags: [Driver]
+      summary: Ajukan withdrawal
+      description: Maksimal 3 request per jam per driver/IP. Saldo dipindahkan ke held secara atomik.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalRequest'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /admin/audit-logs:
+    get:
+      tags: [Admin]
+      summary: Daftar audit log
+      parameters:
+        - in: query
+          name: event
+          schema: { type: string, enum: [created, updated, deleted] }
+        - in: query
+          name: actor_id
+          schema: { type: integer }
+        - in: query
+          name: subject_type
+          schema: { type: string }
+        - in: query
+          name: subject_id
+          schema: { type: integer }
+        - in: query
+          name: date_from
+          schema: { type: string, format: date }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/audit-logs/{auditLog}:
+    get:
+      tags: [Admin]
+      summary: Detail audit log
+      parameters:
+        - $ref: '#/components/parameters/AuditLogId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/payments/{payment}/verification:
+    patch:
+      tags: [Admin]
+      summary: Setujui atau tolak pembayaran
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [paid, rejected] }
+                rejection_reason: { type: string, nullable: true }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/bookings/{booking}/status:
+    patch:
+      tags: [Admin]
+      summary: Ubah status booking sesuai state machine
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [confirmed, ongoing, completed, cancelled] }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/bookings/{booking}/driver-assignments:
+    post:
+      tags: [Admin]
+      summary: Tawarkan assignment driver dan kendaraan
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [driver_id, vehicle_id]
+              properties:
+                driver_id: { type: integer }
+                vehicle_id: { type: integer }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/bookings/{booking}/participant-allocations:
+    get:
+      tags: [Admin]
+      summary: Daftar alokasi peserta ke kendaraan
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+    put:
+      tags: [Admin]
+      summary: Atur alokasi peserta ke assignment yang diterima
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/withdrawals/{withdrawal}:
+    patch:
+      tags: [Admin]
+      summary: Proses withdrawal pending menjadi approved/rejected lalu paid
+      parameters:
+        - $ref: '#/components/parameters/WithdrawalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [approved, rejected, paid] }
+                rejection_reason: { type: string, nullable: true }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+  parameters:
+    PerPage:
+      in: query
+      name: per_page
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    TourPackageId: { in: path, name: tourPackage, required: true, schema: { type: integer } }
+    BookingId: { in: path, name: booking, required: true, schema: { type: integer } }
+    PaymentId: { in: path, name: payment, required: true, schema: { type: integer } }
+    VehicleId: { in: path, name: vehicle, required: true, schema: { type: integer } }
+    VehiclePhotoId: { in: path, name: vehiclePhoto, required: true, schema: { type: integer } }
+    DriverAssignmentId: { in: path, name: driverAssignment, required: true, schema: { type: integer } }
+    WithdrawalId: { in: path, name: withdrawal, required: true, schema: { type: integer } }
+    NotificationId: { in: path, name: notification, required: true, schema: { type: string, format: uuid } }
+    AuditLogId: { in: path, name: auditLog, required: true, schema: { type: integer } }
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, nullable: true }
+        data: { nullable: true }
+    ErrorEnvelope:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+    CustomerRegistrationRequest:
+      type: object
+      required: [name, email, phone, password]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        password: { type: string, format: password }
+        password_confirmation: { type: string, format: password }
+    BookingRequest:
+      type: object
+      required: [tour_package_id, tour_date, participant_count]
+      properties:
+        tour_package_id: { type: integer }
+        tour_date: { type: string, format: date }
+        participant_count: { type: integer, minimum: 1 }
+        notes: { type: string, nullable: true }
+        participants:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string }
+              phone: { type: string, nullable: true }
+    VehicleRequest:
+      type: object
+      properties:
+        name: { type: string }
+        plate_number: { type: string }
+        brand: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        year: { type: integer, nullable: true }
+        capacity: { type: integer, minimum: 1 }
+        notes: { type: string, nullable: true }
+    WithdrawalRequest:
+      type: object
+      required: [points, bank_name, account_number, account_name]
+      properties:
+        points: { type: integer, minimum: 100 }
+        bank_name: { type: string }
+        account_number: { type: string }
+        account_name: { type: string }
+  responses:
+    Success:
+      description: Request berhasil
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+    Created:
+      description: Resource berhasil dibuat
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SuccessEnvelope' }
+    Unauthenticated:
+      description: Token tidak tersedia atau tidak valid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Forbidden:
+      description: Role tidak diizinkan
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    NotFound:
+      description: Resource tidak ditemukan atau bukan milik user
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Conflict:
+      description: Konflik business rule atau state transition
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    ValidationError:
+      description: Validasi request gagal
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    TooManyRequests:
+      description: Rate limit tercapai. Ikuti header Retry-After.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+          description: Detik sampai request berikutnya boleh dicoba.
+        X-RateLimit-Limit:
+          schema: { type: integer }
+        X-RateLimit-Remaining:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
