@@ -35,6 +35,7 @@
 - API rate limiting is risk-based.
 - OpenAPI lint and all backend tests run autonomously in GitHub Actions.
 - Dashboard period metrics use record `created_at`; driver and vehicle metrics are current snapshots.
+- CSV exports are admin-only, stream rows with database cursors, return UTF-8 BOM, disable caching, and neutralize spreadsheet formula prefixes.
 
 ## Implemented progress
 
@@ -65,11 +66,24 @@
 - Customer and driver roles receive `403`.
 - Documentation: `docs/ADMIN_DASHBOARD.md`.
 
+### Admin CSV report exports
+
+- Endpoints:
+  - `GET /api/v1/admin/reports/export/bookings`
+  - `GET /api/v1/admin/reports/export/payments`
+  - `GET /api/v1/admin/reports/export/drivers`
+  - `GET /api/v1/admin/reports/export/withdrawals`
+- Shared `date_from` and `date_to` filters default to the latest 30 days and allow at most 366 days.
+- Booking, payment, and withdrawal exports support status filters; driver export supports operational and verification status filters.
+- Responses are streamed with `cursor()` to avoid loading the full report into memory.
+- CSV output includes UTF-8 BOM, `no-store`, `nosniff`, and formula-injection neutralization.
+- Documentation: `docs/CSV_REPORTS.md`.
+
 ### Autonomous CI
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-Confirmed before dashboard changes:
+Confirmed before CSV export changes:
 
 - OpenAPI lint: passing.
 - SQLite feature suite: passing.
@@ -89,17 +103,17 @@ Confirmed before dashboard changes:
 - `RateLimitFlowTest`
 - `QueueHealthFlowTest`
 - `AdminDashboardFlowTest`
+- `AdminReportExportFlowTest`
 - `tests/Integration/MySql/ConcurrentWithdrawalTest.php`
 
 ## Verification status
 
-- Existing CI was green before admin dashboard changes.
-- Dashboard and queue-hardening changes are committed; the current CI run must be checked before claiming their new tests pass.
+- Existing CI was green before CSV export changes.
+- CSV export changes are committed; the current CI run must be checked before claiming `AdminReportExportFlowTest` passes.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Inspect and fix any dashboard/queue CI failure.
-2. Add downloadable CSV reports for bookings, payments, drivers, and withdrawals.
-3. Expand OpenAPI exact response schemas and remaining admin CRUD endpoints.
-4. Prepare backup, deployment, monitoring, and frontend/Flutter integration.
+1. Inspect and fix any CSV export CI failure.
+2. Expand OpenAPI exact response schemas and remaining admin CRUD endpoints.
+3. Prepare backup, deployment, monitoring, and frontend/Flutter integration.
