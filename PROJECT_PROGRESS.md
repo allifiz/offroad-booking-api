@@ -9,56 +9,54 @@ Local path: `C:\Projects\offroad-booking-api`
 
 - Backend core MVP: approximately 99%.
 - Backend production readiness: approximately 96–97%.
-- Laravel admin web: authentication, dashboard, payment verification, booking operations, shared lifecycle completion, and participant allocation implemented.
+- Laravel admin web: authentication, dashboard, payment verification, booking operations, lifecycle completion, participant allocation, and driver/vehicle verification implemented.
 
 ## Shared booking lifecycle
 
-Canonical service:
-
-```text
-app/Services/BookingLifecycleService.php
-```
+Canonical service: `app/Services/BookingLifecycleService.php`.
 
 Responsibilities:
 
 - strict booking transition validation
-- paid-booking requirements
-- accepted-assignment requirements
+- paid-booking and accepted-assignment requirements
 - row locking and transaction retry
-- cancellation propagation to active assignments
+- cancellation propagation
 - completion reward distribution
 - idempotent point-ledger creation
 
-Both API and Admin Web now use the same service for status transitions.
+Both API and Admin Web use the same service for status transitions.
 
-## Admin booking operations
+## Admin driver and vehicle verification
 
 Routes:
 
 ```text
-GET   /admin/bookings
-GET   /admin/bookings/{booking}
-PATCH /admin/bookings/{booking}/status
-POST  /admin/bookings/{booking}/assignments
-PATCH /admin/bookings/{booking}/assignments/{assignment}/cancel
-PUT   /admin/bookings/{booking}/participant-allocations
+GET   /admin/drivers
+GET   /admin/drivers/{driverProfile}
+PATCH /admin/drivers/{driverProfile}
+PATCH /admin/drivers/{driverProfile}/vehicles/{vehicle}
 ```
 
 Implemented:
 
-- booking list/detail and filters
-- safe status transitions through the shared service
-- booking completion from Admin Web with driver rewards
-- assignment offer and cancellation
-- participant allocation to accepted assignments
-- capacity enforcement
-- moving a participant between accepted assignments without duplicate allocation
-- final bookings cannot be allocated
+- driver verification queue with status filters
+- search by driver name, email, license number, or identity number
+- driver profile and document review
+- vehicle list and document metadata on driver detail
+- driver approve/reject with mandatory rejection reason
+- vehicle approve/reject with mandatory rejection reason
+- approval activates driver/vehicle as `available`
+- rejection forces driver/vehicle to `unavailable`
+- verifier and verification timestamp are recorded
+- nested vehicle ownership is checked before mutation
 
-Test:
+Files:
 
 ```text
-tests/Feature/AdminWebBookingLifecycleFlowTest.php
+app/Http/Controllers/Web/Admin/DriverVerificationController.php
+resources/views/admin/drivers/index.blade.php
+resources/views/admin/drivers/show.blade.php
+tests/Feature/AdminWebDriverVerificationFlowTest.php
 ```
 
 ## Existing production operations
@@ -83,7 +81,7 @@ docs/PRODUCTION_DEPLOYMENT.md
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-CI was confirmed green before the shared lifecycle and allocation changes. Do not claim the newest lifecycle/allocation test passes until the workflow result is confirmed.
+CI was confirmed green before the driver/vehicle verification web changes. Do not claim the new verification test passes until the latest workflow result is confirmed.
 
 ## API documentation
 
@@ -93,9 +91,9 @@ Web-only routes are not part of OpenAPI. Canonical OpenAPI still needs dashboard
 
 ## Next recommended work
 
-1. Inspect and fix any lifecycle/allocation CI failure.
-2. Implement driver and vehicle verification pages.
-3. Implement withdrawal, reports, and audit pages.
+1. Inspect and fix any driver/vehicle verification CI failure.
+2. Implement withdrawal operations pages.
+3. Implement reports and audit pages.
 4. Complete canonical OpenAPI coverage.
 5. Start customer web and Flutter driver integration.
 
