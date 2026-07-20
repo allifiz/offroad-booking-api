@@ -110,4 +110,4 @@ jobs:
           php artisan key:generate
 
       - name: Run MySQL concurrency suite
-        run: php artisan test --configuration=phpunit.mysql.xml --stop-on-failure
+        run: vendor/bin/phpunit -c phpunit.mysql.xml --stop-on-failure
