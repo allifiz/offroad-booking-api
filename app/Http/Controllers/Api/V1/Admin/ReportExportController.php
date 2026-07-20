@@ -8,6 +8,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportExportController extends Controller
@@ -103,7 +104,7 @@ class ReportExportController extends Controller
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'verification_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
-            'status' => ['nullable', Rule::in(['available', 'unavailable', 'suspended', 'inactive'])],
+            'status' => ['nullable', Rule::in(['available', 'unavailable', 'suspended'])],
         ]);
 
         [$from, $to] = $this->resolvePeriod($validated);
@@ -226,7 +227,11 @@ class ReportExportController extends Controller
             ? CarbonImmutable::parse($validated['date_from'])->startOfDay()
             : $to->subDays(29)->startOfDay();
 
-        abort_if($from->diffInDays($to) > 366, 422, 'Rentang export maksimal 366 hari.');
+        if ($from->diffInDays($to) > 366) {
+            throw ValidationException::withMessages([
+                'date_from' => ['Rentang export maksimal 366 hari.'],
+            ]);
+        }
 
         return [$from, $to];
     }
