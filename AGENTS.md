@@ -27,21 +27,21 @@
 - Risk-based rate limiting, queued notifications, MySQL concurrency protection, reporting, CSV export, health checks, backup/deploy scripts, and autonomous CI.
 - GitHub Actions jobs: OpenAPI lint, SQLite suite, and MySQL concurrency suite.
 
-## Admin web foundation
+## Admin web
 
-- Routes:
-  - `GET /admin/login`
-  - `POST /admin/login`
-  - `GET /admin`
-  - `POST /admin/logout`
-- Uses Laravel session authentication; only active users with role `admin` may log in.
-- `EnsureAdminWeb` returns a web `403` for authenticated non-admin users.
-- Dashboard uses direct database queries, not internal HTTP calls to the API.
-- Current dashboard includes period filtering, booking/payment cards, operational queues, and recent bookings.
-- Blade pages:
-  - `resources/views/admin/auth/login.blade.php`
-  - `resources/views/admin/dashboard.blade.php`
-- Test: `AdminWebFlowTest`.
+- Session routes: `/admin/login`, `/admin`, `/admin/logout`.
+- Only active admin users may log in; authenticated non-admin users receive web `403`.
+- Dashboard uses direct database queries and includes period metrics, recent bookings, and operational queues.
+- Payment operations:
+  - `GET /admin/payments`
+  - `GET /admin/payments/{payment}`
+  - `PATCH /admin/payments/{payment}`
+- Payment list supports status filtering and booking/customer search.
+- Pending payments can be approved or rejected; rejection requires a reason.
+- Payment and booking payment statuses update in one database transaction.
+- Customers receive queued operational notifications after approval/rejection.
+- Views: `resources/views/admin/payments/index.blade.php` and `show.blade.php`.
+- Tests: `AdminWebFlowTest`, `AdminWebPaymentFlowTest`.
 
 ## Production operations
 
@@ -52,22 +52,16 @@
 - Backup script: `deploy/scripts/backup.sh`.
 - Runbooks: `docs/QUEUE_PRODUCTION.md`, `docs/PRODUCTION_DEPLOYMENT.md`.
 
-## Admin reporting API
-
-- `GET /api/v1/admin/dashboard`.
-- CSV exports for bookings, payments, drivers, and withdrawals.
-- Guides: `docs/ADMIN_DASHBOARD.md`, `docs/CSV_REPORTS.md`.
-
 ## Verification status
 
-- CI was confirmed green before the admin web foundation changes.
-- Do not claim `AdminWebFlowTest` passes until the new CI run is confirmed.
+- CI was confirmed green before the admin payment web changes.
+- Do not claim `AdminWebPaymentFlowTest` passes until the new CI run is confirmed.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Inspect and fix any admin web CI failure.
-2. Build admin payment verification list/detail/actions.
-3. Build booking operations, driver/vehicle verification, withdrawals, reports, and audit pages.
+1. Inspect and fix any admin payment web CI failure.
+2. Build booking operations pages and actions.
+3. Build driver/vehicle verification, withdrawals, reports, and audit pages.
 4. Finish canonical OpenAPI dashboard/CSV/admin schemas.
 5. Start customer web and Flutter driver integration.
