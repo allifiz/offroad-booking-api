@@ -23,7 +23,7 @@ class AdminDashboardFlowTest extends TestCase
             ->assertJsonPath('data.period.date_to', '2026-07-30')
             ->assertJsonPath('data.period.days', 30)
             ->assertJsonPath('data.bookings.total', 0)
-            ->assertJsonPath('data.payments.approved_revenue', 0)
+            ->assertJsonPath('data.payments.paid_revenue', 0)
             ->assertJsonPath('data.drivers.total', 0)
             ->assertJsonPath('data.vehicles.total', 0)
             ->assertJsonPath('data.withdrawals.total', 0)
