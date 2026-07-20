@@ -37,6 +37,9 @@
 
 - Session authentication, dashboard, payment verification, booking operations, participant allocation, driver/vehicle verification, withdrawal operations, reports, and audit logs are implemented.
 - Session-protected CSV downloads reuse `Api\V1\Admin\ReportExportController`.
+- Guest redirects are configured explicitly through `redirectGuestsTo()` and must resolve to `admin.login`.
+- Root `/` intentionally redirects to `/admin`; tests must assert the redirect instead of expecting a 200 response.
+- Booking list rendering parses `tour_date` defensively and casts decimal totals before formatting.
 - Admin Blade views use Vite assets and therefore CI must build `public/build/manifest.json` before rendering feature tests.
 
 ## CI requirements
@@ -57,13 +60,13 @@
 
 ## Verification status
 
-- The latest SQLite failure was caused by a missing Vite manifest in GitHub Actions, not application business logic.
-- Workflow commit `ab13bbf80e1cea108c0fe837a15d9f81c77cd6ae` adds the frontend build before SQLite feature tests.
-- Do not claim the latest workflow passes until GitHub Actions confirms it.
+- The latest SQLite run passed most suites but exposed three web-test regressions: unauthenticated redirect configuration, outdated root-route expectation, and booking list rendering.
+- Fix commits: `f09bc7ce24a784569792e298c51e9917c70b6a58`, `388d7016e8e087fcf728e80a19c4c04d66c9786e`, and `0780d82c251d88bcd568306c77062692103d22c3`.
+- Do not claim the newest workflow passes until GitHub Actions confirms it.
 
 ## Next progress list
 
-1. Confirm the rebuilt SQLite suite is green and fix any subsequent application-level failure.
+1. Confirm the rebuilt SQLite suite is green and fix any remaining test failure.
 2. Finish canonical OpenAPI dashboard/CSV/admin schemas.
 3. Start customer web.
 4. Start Flutter driver integration.
