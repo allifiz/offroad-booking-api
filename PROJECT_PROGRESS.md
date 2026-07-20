@@ -11,17 +11,67 @@ Local path: `C:\Projects\offroad-booking-api`
 - Backend production readiness: approximately 97%.
 - Laravel admin web: core operational modules implemented, including reports and audit logs.
 
-## Latest CI issue and fix
+## Latest SQLite run
 
-The SQLite feature suite failed while rendering Admin Web Blade views because GitHub Actions had not generated:
+After the Vite manifest fix, most feature tests passed. Three web regressions remained:
+
+```text
+AdminWebBookingFlowTest
+AdminWebFlowTest
+ExampleTest
+```
+
+### Guest redirect fix
+
+Laravel authentication middleware previously expected a global route named `login`, while the project only defines `admin.login`.
+
+`bootstrap/app.php` now explicitly configures:
+
+```php
+$middleware->redirectGuestsTo(fn (Request $request): string => route('admin.login'));
+```
+
+Commit:
+
+```text
+f09bc7ce24a784569792e298c51e9917c70b6a58
+```
+
+### Root route test fix
+
+The root route intentionally redirects:
+
+```text
+/ → /admin
+```
+
+The old skeleton `ExampleTest` expected HTTP 200. It now asserts the intended redirect.
+
+Commit:
+
+```text
+0780d82c251d88bcd568306c77062692103d22c3
+```
+
+### Booking list render hardening
+
+The booking list now parses `tour_date` through Carbon and casts `total_amount` to float before formatting. This avoids a view-level 500 when SQLite hydration returns values in a different runtime shape.
+
+Commit:
+
+```text
+388d7016e8e087fcf728e80a19c4c04d66c9786e
+```
+
+## CI frontend requirements
+
+SQLite feature tests render Blade pages using Laravel `@vite`, so the workflow must generate:
 
 ```text
 public/build/manifest.json
 ```
 
-The application views use Laravel `@vite`, so the manifest must exist before feature tests render those views.
-
-Workflow fix in `.github/workflows/backend-tests.yml`:
+The job now runs:
 
 ```text
 setup Node.js 22
@@ -30,15 +80,13 @@ setup Node.js 22
 → php artisan test
 ```
 
-The repository currently has no `package-lock.json`, therefore the workflow uses `npm install` instead of `npm ci`.
-
-Commit containing the workflow fix:
+Workflow commit:
 
 ```text
 ab13bbf80e1cea108c0fe837a15d9f81c77cd6ae
 ```
 
-The reported `AdminWebDriverVerificationFlowTest` and `AdminWebFlowTest` failures were consequences of the missing Vite manifest, not failed business assertions.
+The repository currently has no `package-lock.json`, therefore CI uses `npm install` instead of `npm ci`.
 
 ## Admin reports and audit logs
 
@@ -80,15 +128,15 @@ docs/PRODUCTION_DEPLOYMENT.md
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-Previously reported on the failing run:
+Latest reported state before these three fixes:
 
 ```text
 OpenAPI lint: successful
 MySQL concurrency suite: successful
-SQLite feature suite: failed because Vite manifest was absent
+SQLite feature suite: failed with three web tests
 ```
 
-A new run has been triggered by the workflow fix. Do not claim it passes until GitHub Actions confirms it.
+A new workflow run is required. Do not claim it passes until GitHub Actions confirms it.
 
 ## API documentation
 
@@ -98,10 +146,10 @@ Web-only routes are not part of OpenAPI. Canonical OpenAPI still needs dashboard
 
 ## Next recommended work
 
-1. Confirm the SQLite feature suite is green after the Vite build fix.
-2. Fix any subsequent application-level test failure if one appears.
-3. Complete canonical OpenAPI coverage.
-4. Start customer web, then Flutter driver integration.
+1. Confirm the SQLite feature suite is green after the redirect, root-test, and booking-render fixes.
+2. Complete canonical OpenAPI coverage.
+3. Start customer web.
+4. Start Flutter driver integration.
 
 ## Response format rule
 
