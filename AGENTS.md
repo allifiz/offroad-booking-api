@@ -39,7 +39,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Actors: admin, driver, customer.
 - Driver and vehicle registration start pending/unavailable.
 - Admin verifies drivers, vehicles, driver documents, and vehicle documents.
-- Driver-owned vehicles are always created with ownership `driver`, verification `pending`, and availability `unavailable`.
+- Driver-owned vehicles are created with ownership `driver`, verification `pending`, and availability `unavailable`.
 - Vehicle identity/capacity or media-content changes reset verification to pending and availability to unavailable.
 - Vehicles with offered or accepted assignments cannot be deleted.
 - Admin offers assignments; drivers accept or reject them.
@@ -48,46 +48,38 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Booking transitions are strict: pending → confirmed/cancelled, confirmed → ongoing/cancelled, ongoing → completed, completed/cancelled final.
 - Participant allocation targets accepted assignments from the same booking and may not exceed vehicle capacity.
 - Completing a booking awards each accepted driver configurable points once per booking.
-- Withdrawal creation moves available points to held; rejection releases them; paid removes them from held.
-- Withdrawal balance mutation must lock the driver-profile row in MySQL so parallel requests cannot spend the same points.
+- Withdrawal balance mutation locks the driver-profile row in MySQL so parallel requests cannot spend the same points.
 - Sensitive model create/update/delete operations are automatically audited.
 - Operational notifications are stored in the database and dispatched through Laravel queue after transaction commit.
-- Notification ownership is isolated; users can only read their own inbox entries.
+- Notification ownership is isolated.
+- Rate limiting is risk-based: login by email+IP, public registration by IP, authenticated reads by user, uploads by user, withdrawals by driver, and admin writes by admin.
 
 ## Implemented progress
 
-### Foundation and actors
+### Core transaction flow
 
-- Laravel 13 + MySQL/MariaDB, Sanctum, role middleware, tour packages, vehicles.
-- Driver registration, verification, dashboard, availability, documents, vehicle CRUD/media, and document re-upload.
-- Customer registration/profile, bookings, participants, and ownership isolation.
+- Customer registration/profile, tour packages, bookings, participants, payments, ownership isolation, and strict booking state machine.
+- Driver registration, verification, dashboard, documents, vehicle CRUD/media, availability, and assignment response.
+- Travel groups and participant-to-vehicle allocation with capacity and cross-booking isolation.
+- Points, HOLD/RELEASE/DEBIT ledger behavior, withdrawal processing, and completion reward idempotency.
 
-### Booking transaction flow
+### Production hardening
 
-- Payment submission/admin verification, paid assignment guard, assignment response, strict booking state machine.
-- Travel groups and participant-to-vehicle allocation with ownership and capacity validation.
+- Central `AuditObserver` for sensitive models and admin read-only audit endpoints.
+- Queued database notifications for payment, booking, assignment, verification, and withdrawal state changes.
+- Shared authenticated notification inbox with unread filtering and read actions.
+- `WithdrawalService` with transaction, row lock, retry, and dedicated two-process MySQL concurrency test.
+- Named Laravel rate limiters:
+  - `auth-login`: 5/minute per normalized email + IP
+  - `public-registration`: 3/hour per IP
+  - `authenticated-read`: 120/minute per user/IP
+  - `customer-write`: 20/minute per user/IP
+  - `driver-write`: 30/minute per user/IP
+  - `file-upload`: 10/minute per user/IP
+  - `withdrawal-request`: 3/hour per user/IP
+  - `admin-write`: 60/minute per user/IP
 
-### Points and withdrawal
-
-- Booking completion credits accepted drivers once per booking.
-- Driver point summary, ledger, withdrawal request/list.
-- Admin strict withdrawal processing: pending → approved/rejected, approved → paid.
-- Withdrawal request logic lives in `WithdrawalService` and uses a row lock plus a retryable transaction.
-- The API controller and the concurrency worker command use the same service, avoiding divergent financial logic.
-
-### Audit logs
-
-- Central `AuditObserver` records created, updated, and deleted events for sensitive models.
-- Admin can paginate/filter logs and view detail; audit endpoints are read-only.
-
-### Notifications and queues
-
-- `OperationalNotification` implements `ShouldQueue`, uses the database channel, and dispatches after commit.
-- Automatic notifications cover payment status, booking status, assignment offer/response, driver verification, vehicle verification, and withdrawal status.
-- Authenticated admin/customer/driver users share one notification inbox API.
-- Users can filter unread entries, mark one entry read, or mark all entries read.
-
-### Critical feature tests
+### Critical tests
 
 - `DriverWithdrawalFlowTest`
 - `BookingStateAndRewardFlowTest`
@@ -98,74 +90,45 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - `VehicleMediaFlowTest`
 - `AuditLogFlowTest`
 - `NotificationFlowTest`
-- `tests/Integration/MySql/ConcurrentWithdrawalTest.php` launches two separate Artisan worker processes against the same MySQL database and asserts exactly one withdrawal succeeds.
-- Standard feature tests use SQLite memory; row-lock concurrency uses the dedicated MySQL suite.
+- `RateLimitFlowTest`
+- `tests/Integration/MySql/ConcurrentWithdrawalTest.php`
 
 ## MySQL concurrency test setup
 
-- Dedicated PHPUnit config: `phpunit.mysql.xml`.
+- Dedicated config: `phpunit.mysql.xml`.
 - Default database: `offroad_booking_test` on `127.0.0.1:3306`, user `root`, empty password.
-- The test executes `migrate:fresh`; never point this configuration at development or production data.
+- Test executes `migrate:fresh`; never point it at development or production.
 - Internal worker command: `php artisan withdrawal:attempt`.
-
-## Current relevant endpoints
-
-```text
-GET   /api/v1/notifications
-PATCH /api/v1/notifications/read-all
-PATCH /api/v1/notifications/{notification}/read
-GET   /api/v1/admin/audit-logs
-GET   /api/v1/admin/audit-logs/{auditLog}
-POST  /api/v1/driver/withdrawals
-```
-
-All protected endpoints require Sanctum and the corresponding role where applicable.
-
-## Latest relevant commits
-
-- `89c5df69849a86451eafd675ae50c1bbcded4eb6` — two-process MySQL concurrent withdrawal integration test.
-- `33b33ce0676be9795384dc40d5a3c82a909ae09b` — dedicated MySQL PHPUnit configuration.
-- `b13741a5f012e9f9ed8adbcd09be7e728681445b` — internal withdrawal concurrency worker command.
-- `b876e9bc8dcbbd2c187914501fe4a2f6db80e496` — route API withdrawal creation through the shared service.
-- `9a24bf9770fb04f5139563eb74ab6f3735221c2e` — locked withdrawal service.
-- `038c50f470af8899a4313505529d8b4ad81607a8` — notification inbox feature tests.
-- `a92900d5a7a52a3a95a4faabf29aba28a81c4830` — audit log feature tests.
 
 ## Verification status and limitations
 
 - Runtime tests were not executed in this environment because the GitHub connector has no PHP or MySQL runtime.
-- The concurrency test is intentionally excluded from the default SQLite suite.
-- `phpunit.mysql.xml` calls `migrate:fresh`, so its database must be an isolated disposable test database.
-- Windows is supported because the test uses Symfony Process instead of `pcntl_fork`.
-- Existing withdrawal feature tests should be rerun after the service refactor.
+- Standard suite uses SQLite memory; row-lock concurrency uses the dedicated MySQL suite.
+- Rate-limit tests were added but still need local execution.
 - Run locally:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
-php artisan test --filter=DriverWithdrawalFlowTest
+php artisan test --filter=RateLimitFlowTest
 php artisan test
 php artisan test --configuration=phpunit.mysql.xml
 ```
 
+## Latest relevant commits
+
+- `e20b6c716142e4420a43be4453ebbee3e3fbe7f7` — public rate-limit feature tests.
+- `8b2b92e8cef1f2a5c16ea640ae103eaf0794cb45` — apply rate-limit middleware to routes.
+- `615d775963c0a6ab5c372221af0794c17b4b9747` — configure named API rate limiters.
+- `89c5df69849a86451eafd675ae50c1bbcded4eb6` — MySQL concurrent withdrawal test.
+- `038c50f470af8899a4313505529d8b4ad81607a8` — notification feature tests.
+- `a92900d5a7a52a3a95a4faabf29aba28a81c4830` — audit-log feature tests.
+
 ## Next progress list
 
-### Priority 1 — Verification
-
-- run/fix the standard full suite
-- run/fix the dedicated MySQL concurrency suite
-
-### Priority 2 — Production hardening
-
-- production queue configuration and worker supervision
-- rate limiting and OpenAPI documentation
-- reports, backup, deployment, and client integration
-
-## Recommended immediate continuation
-
-```text
-Run/fix standard and MySQL test suites
-→ Add rate limiting
-→ Add OpenAPI documentation
-→ Prepare deployment and backup
-```
+1. Run/fix standard full suite.
+2. Run/fix dedicated MySQL concurrency suite.
+3. Add OpenAPI documentation.
+4. Configure production queue worker/supervision.
+5. Add reporting/dashboard metrics.
+6. Prepare backup, deployment, monitoring, and client integration.
