@@ -35,12 +35,16 @@
 
 ## Admin web
 
-- Session authentication, dashboard, payment verification, booking operations, participant allocation, driver/vehicle verification, and withdrawal operations are implemented.
-- Reports page: `GET /admin/reports`.
-- Session-protected CSV downloads reuse `Api\V1\Admin\ReportExportController`, preserving cursor streaming, UTF-8 BOM, no-store, nosniff, period validation, and formula-injection neutralization.
-- Audit pages: `GET /admin/audit-logs` and `GET /admin/audit-logs/{auditLog}`.
-- Audit filters cover event, actor name/email, subject type/id, and date range. Detail shows actor/request context plus formatted before/after JSON.
-- Tests include `AdminWebReportsAuditFlowTest` plus existing admin web suites.
+- Session authentication, dashboard, payment verification, booking operations, participant allocation, driver/vehicle verification, withdrawal operations, reports, and audit logs are implemented.
+- Session-protected CSV downloads reuse `Api\V1\Admin\ReportExportController`.
+- Admin Blade views use Vite assets and therefore CI must build `public/build/manifest.json` before rendering feature tests.
+
+## CI requirements
+
+- SQLite feature job uses PHP 8.4 and Node.js 22.
+- Run `npm install --ignore-scripts` followed by `npm run build` before `php artisan test`.
+- The repository currently has no `package-lock.json`, so CI must not use `npm ci` until a lockfile is committed.
+- MySQL concurrency tests do not render Blade and do not require a frontend build.
 
 ## Production operations
 
@@ -53,13 +57,13 @@
 
 ## Verification status
 
-- CI was confirmed green before the reports/audit web changes.
-- Do not claim `AdminWebReportsAuditFlowTest` passes until the newest CI run is confirmed.
-- GitHub Actions remains the primary autonomous validator.
+- The latest SQLite failure was caused by a missing Vite manifest in GitHub Actions, not application business logic.
+- Workflow commit `ab13bbf80e1cea108c0fe837a15d9f81c77cd6ae` adds the frontend build before SQLite feature tests.
+- Do not claim the latest workflow passes until GitHub Actions confirms it.
 
 ## Next progress list
 
-1. Inspect and fix any reports/audit CI failure.
+1. Confirm the rebuilt SQLite suite is green and fix any subsequent application-level failure.
 2. Finish canonical OpenAPI dashboard/CSV/admin schemas.
 3. Start customer web.
 4. Start Flutter driver integration.
