@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\Admin\BookingController;
 use App\Http\Controllers\Web\Admin\DashboardController;
 use App\Http\Controllers\Web\Admin\DriverVerificationController;
 use App\Http\Controllers\Web\Admin\PaymentController;
+use App\Http\Controllers\Web\Admin\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin');
@@ -33,6 +34,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/drivers/{driverProfile}', [DriverVerificationController::class, 'show'])->name('drivers.show');
         Route::patch('/drivers/{driverProfile}', [DriverVerificationController::class, 'updateDriver'])->name('drivers.update');
         Route::patch('/drivers/{driverProfile}/vehicles/{vehicle}', [DriverVerificationController::class, 'updateVehicle'])->name('drivers.vehicles.update');
+
+        Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+        Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'show'])->name('withdrawals.show');
+        Route::patch('/withdrawals/{withdrawal}', [WithdrawalController::class, 'update'])->name('withdrawals.update');
 
         Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     });
