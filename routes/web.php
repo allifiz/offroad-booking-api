@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\ReportExportController;
+use App\Http\Controllers\Web\Admin\AuditLogController;
 use App\Http\Controllers\Web\Admin\AuthController;
 use App\Http\Controllers\Web\Admin\BookingController;
 use App\Http\Controllers\Web\Admin\DashboardController;
 use App\Http\Controllers\Web\Admin\DriverVerificationController;
 use App\Http\Controllers\Web\Admin\PaymentController;
+use App\Http\Controllers\Web\Admin\ReportController;
 use App\Http\Controllers\Web\Admin\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +41,15 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
         Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'show'])->name('withdrawals.show');
         Route::patch('/withdrawals/{withdrawal}', [WithdrawalController::class, 'update'])->name('withdrawals.update');
+
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export/bookings', [ReportExportController::class, 'bookings'])->name('reports.bookings');
+        Route::get('/reports/export/payments', [ReportExportController::class, 'payments'])->name('reports.payments');
+        Route::get('/reports/export/drivers', [ReportExportController::class, 'drivers'])->name('reports.drivers');
+        Route::get('/reports/export/withdrawals', [ReportExportController::class, 'withdrawals'])->name('reports.withdrawals');
+
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 
         Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     });
