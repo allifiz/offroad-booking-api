@@ -29,19 +29,19 @@
 
 ## Admin web
 
-- Session routes: `/admin/login`, `/admin`, `/admin/logout`.
-- Only active admin users may log in; authenticated non-admin users receive web `403`.
-- Dashboard uses direct database queries and includes period metrics, recent bookings, and operational queues.
-- Payment operations:
-  - `GET /admin/payments`
-  - `GET /admin/payments/{payment}`
-  - `PATCH /admin/payments/{payment}`
-- Payment list supports status filtering and booking/customer search.
-- Pending payments can be approved or rejected; rejection requires a reason.
-- Payment and booking payment statuses update in one database transaction.
-- Customers receive queued operational notifications after approval/rejection.
-- Views: `resources/views/admin/payments/index.blade.php` and `show.blade.php`.
-- Tests: `AdminWebFlowTest`, `AdminWebPaymentFlowTest`.
+- Session login/dashboard/logout for active admin users.
+- Payment list/detail/approve/reject operations with queued customer notifications.
+- Booking operations:
+  - `GET /admin/bookings`
+  - `GET /admin/bookings/{booking}`
+  - `PATCH /admin/bookings/{booking}/status`
+  - `POST /admin/bookings/{booking}/assignments`
+  - `PATCH /admin/bookings/{booking}/assignments/{assignment}/cancel`
+- Booking list supports status, payment status, and booking/customer search.
+- Web status transitions currently support pending→confirmed/cancelled and confirmed→ongoing/cancelled.
+- Web completion is intentionally blocked until reward logic is centralized, preventing completion without idempotent point rewards.
+- Assignment requires paid non-final booking, approved available driver, and approved available driver-owned vehicle.
+- Tests: `AdminWebFlowTest`, `AdminWebPaymentFlowTest`, `AdminWebBookingFlowTest`.
 
 ## Production operations
 
@@ -54,14 +54,14 @@
 
 ## Verification status
 
-- CI was confirmed green before the admin payment web changes.
-- Do not claim `AdminWebPaymentFlowTest` passes until the new CI run is confirmed.
+- CI was confirmed green before the admin booking web changes.
+- Do not claim `AdminWebBookingFlowTest` passes until the new CI run is confirmed.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Inspect and fix any admin payment web CI failure.
-2. Build booking operations pages and actions.
-3. Build driver/vehicle verification, withdrawals, reports, and audit pages.
-4. Finish canonical OpenAPI dashboard/CSV/admin schemas.
-5. Start customer web and Flutter driver integration.
+1. Inspect and fix any admin booking web CI failure.
+2. Centralize booking status/reward logic in a shared service, then enable web completion.
+3. Build participant allocation and driver/vehicle verification web pages.
+4. Build withdrawals, reports, and audit pages.
+5. Finish canonical OpenAPI and start customer web/Flutter integration.
