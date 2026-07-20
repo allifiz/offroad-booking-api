@@ -55,8 +55,9 @@ jobs:
       - name: Prepare Laravel environment
         run: |
           cp .env.example .env
+          touch database/database.sqlite
+          printf '\nCACHE_STORE=array\nSESSION_DRIVER=array\nQUEUE_CONNECTION=sync\n' >> .env
           php artisan key:generate
-          php artisan optimize:clear
 
       - name: Run full feature and unit suite
         run: php artisan test
@@ -105,8 +106,8 @@ jobs:
       - name: Prepare Laravel environment
         run: |
           cp .env.example .env
+          printf '\nCACHE_STORE=array\nSESSION_DRIVER=array\nQUEUE_CONNECTION=sync\n' >> .env
           php artisan key:generate
-          php artisan optimize:clear
 
       - name: Run MySQL concurrency suite
         run: php artisan test --configuration=phpunit.mysql.xml --stop-on-failure
