@@ -3,16 +3,12 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\BookingStatus;
-use App\Enums\DriverAssignmentStatus;
 use App\Enums\PaymentStatus;
-use App\Enums\PointLedgerType;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use App\Models\PointLedger;
+use App\Services\BookingLifecycleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -60,108 +56,18 @@ class BookingController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, Booking $booking): JsonResponse
+    public function updateStatus(Request $request, Booking $booking, BookingLifecycleService $lifecycle): JsonResponse
     {
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:'.implode(',', array_column(BookingStatus::cases(), 'value'))],
         ]);
 
-        $currentStatus = $booking->status;
-        $nextStatus = BookingStatus::from($validated['status']);
-        $allowedTransitions = [
-            BookingStatus::PENDING->value => [BookingStatus::CONFIRMED, BookingStatus::CANCELLED],
-            BookingStatus::CONFIRMED->value => [BookingStatus::ONGOING, BookingStatus::CANCELLED],
-            BookingStatus::ONGOING->value => [BookingStatus::COMPLETED],
-            BookingStatus::COMPLETED->value => [],
-            BookingStatus::CANCELLED->value => [],
-        ];
-
-        if (! in_array($nextStatus, $allowedTransitions[$currentStatus->value], true)) {
-            throw ValidationException::withMessages([
-                'status' => ["Transisi status dari {$currentStatus->value} ke {$nextStatus->value} tidak diizinkan."],
-            ]);
-        }
-
-        if ($nextStatus === BookingStatus::CONFIRMED && $booking->payment_status !== PaymentStatus::PAID) {
-            throw ValidationException::withMessages([
-                'payment_status' => ['Booking harus berstatus paid sebelum dapat dikonfirmasi.'],
-            ]);
-        }
-
-        if (in_array($nextStatus, [BookingStatus::ONGOING, BookingStatus::COMPLETED], true)) {
-            if ($booking->payment_status !== PaymentStatus::PAID) {
-                throw ValidationException::withMessages([
-                    'payment_status' => ['Booking harus berstatus paid sebelum dapat dimulai atau diselesaikan.'],
-                ]);
-            }
-
-            if (! $booking->driverAssignments()->where('status', DriverAssignmentStatus::ACCEPTED->value)->exists()) {
-                throw ValidationException::withMessages([
-                    'status' => ['Driver harus menerima assignment sebelum booking dapat dimulai atau diselesaikan.'],
-                ]);
-            }
-        }
-
-        DB::transaction(function () use ($booking, $nextStatus): void {
-            $lockedBooking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
-            $lockedBooking->update(['status' => $nextStatus]);
-
-            if ($nextStatus === BookingStatus::CANCELLED) {
-                $lockedBooking->driverAssignments()
-                    ->whereIn('status', [DriverAssignmentStatus::OFFERED->value, DriverAssignmentStatus::ACCEPTED->value])
-                    ->update([
-                        'status' => DriverAssignmentStatus::CANCELLED->value,
-                        'responded_at' => now(),
-                    ]);
-            }
-
-            if ($nextStatus === BookingStatus::COMPLETED) {
-                $points = config('offroad.points_per_completed_trip');
-                $assignments = $lockedBooking->driverAssignments()
-                    ->where('status', DriverAssignmentStatus::ACCEPTED->value)
-                    ->with('driver.driverProfile')
-                    ->get();
-
-                foreach ($assignments as $assignment) {
-                    $profile = $assignment->driver?->driverProfile;
-                    if (! $profile) {
-                        continue;
-                    }
-
-                    $alreadyAwarded = PointLedger::query()
-                        ->where('driver_profile_id', $profile->id)
-                        ->where('type', PointLedgerType::CREDIT->value)
-                        ->where('reference_type', Booking::class)
-                        ->where('reference_id', $lockedBooking->id)
-                        ->exists();
-
-                    if ($alreadyAwarded) {
-                        continue;
-                    }
-
-                    $lockedProfile = $profile->newQuery()->lockForUpdate()->findOrFail($profile->id);
-                    $lockedProfile->increment('available_points', $points);
-                    $lockedProfile->refresh();
-
-                    PointLedger::query()->create([
-                        'driver_profile_id' => $lockedProfile->id,
-                        'type' => PointLedgerType::CREDIT,
-                        'points' => $points,
-                        'available_balance_after' => $lockedProfile->available_points,
-                        'held_balance_after' => $lockedProfile->held_points,
-                        'reference_type' => Booking::class,
-                        'reference_id' => $lockedBooking->id,
-                        'description' => "Reward trip selesai {$lockedBooking->booking_code}.",
-                        'occurred_at' => now(),
-                    ]);
-                }
-            }
-        });
+        $booking = $lifecycle->transition($booking, BookingStatus::from($validated['status']));
 
         return response()->json([
             'success' => true,
             'message' => 'Status booking berhasil diperbarui.',
-            'data' => $booking->refresh()->load(['customer', 'tourPackage', 'participants', 'driverAssignments']),
+            'data' => $booking->load(['customer', 'tourPackage', 'participants', 'driverAssignments']),
         ]);
     }
 }
