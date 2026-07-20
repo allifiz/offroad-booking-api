@@ -11,9 +11,38 @@ Local path: `C:\Projects\offroad-booking-api`
 - Backend production readiness: approximately 97%.
 - Laravel admin web: core operational modules implemented, including reports and audit logs.
 
-## Admin reports
+## Latest CI issue and fix
 
-Routes:
+The SQLite feature suite failed while rendering Admin Web Blade views because GitHub Actions had not generated:
+
+```text
+public/build/manifest.json
+```
+
+The application views use Laravel `@vite`, so the manifest must exist before feature tests render those views.
+
+Workflow fix in `.github/workflows/backend-tests.yml`:
+
+```text
+setup Node.js 22
+→ npm install --ignore-scripts
+→ npm run build
+→ php artisan test
+```
+
+The repository currently has no `package-lock.json`, therefore the workflow uses `npm install` instead of `npm ci`.
+
+Commit containing the workflow fix:
+
+```text
+ab13bbf80e1cea108c0fe837a15d9f81c77cd6ae
+```
+
+The reported `AdminWebDriverVerificationFlowTest` and `AdminWebFlowTest` failures were consequences of the missing Vite manifest, not failed business assertions.
+
+## Admin reports and audit logs
+
+Implemented routes:
 
 ```text
 GET /admin/reports
@@ -21,52 +50,13 @@ GET /admin/reports/export/bookings
 GET /admin/reports/export/payments
 GET /admin/reports/export/drivers
 GET /admin/reports/export/withdrawals
-```
-
-Implemented:
-
-- session-protected report center
-- configurable `date_from` and `date_to`
-- default latest 30 days
-- maximum range 366 days
-- direct CSV downloads for bookings, payments, drivers, and withdrawals
-- reuses the canonical API export controller
-- cursor streaming, UTF-8 BOM, no-store, nosniff, and formula-injection neutralization remain active
-
-Files:
-
-```text
-app/Http/Controllers/Web/Admin/ReportController.php
-resources/views/admin/reports/index.blade.php
-```
-
-## Admin audit logs
-
-Routes:
-
-```text
 GET /admin/audit-logs
 GET /admin/audit-logs/{auditLog}
 ```
 
-Implemented:
+Reports reuse the canonical CSV export controller with cursor streaming, UTF-8 BOM, no-store, nosniff, period validation, and formula-injection neutralization.
 
-- pagination
-- event filtering
-- actor name/email search
-- subject type and ID filtering
-- date filtering
-- request method, URL, IP, and user-agent context
-- formatted before/after JSON detail
-
-Files:
-
-```text
-app/Http/Controllers/Web/Admin/AuditLogController.php
-resources/views/admin/audit-logs/index.blade.php
-resources/views/admin/audit-logs/show.blade.php
-tests/Feature/AdminWebReportsAuditFlowTest.php
-```
+Audit logs support event, actor, subject, and date filtering plus formatted before/after detail.
 
 ## Existing production operations
 
@@ -90,7 +80,15 @@ docs/PRODUCTION_DEPLOYMENT.md
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-CI was confirmed green before the reports/audit web changes. Do not claim `AdminWebReportsAuditFlowTest` passes until the latest workflow result is confirmed.
+Previously reported on the failing run:
+
+```text
+OpenAPI lint: successful
+MySQL concurrency suite: successful
+SQLite feature suite: failed because Vite manifest was absent
+```
+
+A new run has been triggered by the workflow fix. Do not claim it passes until GitHub Actions confirms it.
 
 ## API documentation
 
@@ -100,10 +98,10 @@ Web-only routes are not part of OpenAPI. Canonical OpenAPI still needs dashboard
 
 ## Next recommended work
 
-1. Inspect and fix any reports/audit CI failure.
-2. Complete canonical OpenAPI coverage.
-3. Start customer web.
-4. Start Flutter driver integration.
+1. Confirm the SQLite feature suite is green after the Vite build fix.
+2. Fix any subsequent application-level test failure if one appears.
+3. Complete canonical OpenAPI coverage.
+4. Start customer web, then Flutter driver integration.
 
 ## Response format rule
 
