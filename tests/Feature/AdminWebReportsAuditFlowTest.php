@@ -40,15 +40,17 @@ class AdminWebReportsAuditFlowTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/audit-logs?event=updated')
             ->assertOk()
-            ->assertSee('Admin Baru', false)
-            ->assertSee('updated');
+            ->assertSee($admin->name)
+            ->assertSee('updated')
+            ->assertSee('User');
 
         $this->actingAs($admin)
             ->get("/admin/audit-logs/{$log->id}")
             ->assertOk()
             ->assertSee('Before')
             ->assertSee('After')
-            ->assertSee('Admin Lama');
+            ->assertSee('Admin Lama')
+            ->assertSee('Admin Baru');
     }
 
     public function test_non_admin_cannot_access_reports_or_audit_logs(): void
