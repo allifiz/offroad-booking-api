@@ -10,6 +10,12 @@ class OperationalNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public int $tries = 5;
+
+    public int $timeout = 30;
+
+    public bool $failOnTimeout = true;
+
     public function __construct(
         public readonly string $event,
         public readonly string $title,
@@ -19,6 +25,12 @@ class OperationalNotification extends Notification implements ShouldQueue
         public readonly array $meta = [],
     ) {
         $this->afterCommit();
+        $this->onQueue('notifications');
+    }
+
+    public function backoff(): array
+    {
+        return [10, 60, 300, 900];
     }
 
     public function via(object $notifiable): array
