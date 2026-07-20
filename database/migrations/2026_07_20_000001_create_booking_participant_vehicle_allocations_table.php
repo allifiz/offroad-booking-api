@@ -14,13 +14,26 @@ return new class extends Migration
 
         Schema::create('booking_participant_vehicle_allocations', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('booking_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('booking_participant_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('driver_assignment_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('booking_id');
+            $table->foreignId('booking_participant_id');
+            $table->foreignId('driver_assignment_id');
             $table->timestamps();
 
-            $table->unique('booking_participant_id');
-            $table->index(['booking_id', 'driver_assignment_id']);
+            $table->foreign('booking_id', 'bpva_booking_fk')
+                ->references('id')
+                ->on('bookings')
+                ->cascadeOnDelete();
+            $table->foreign('booking_participant_id', 'bpva_participant_fk')
+                ->references('id')
+                ->on('booking_participants')
+                ->cascadeOnDelete();
+            $table->foreign('driver_assignment_id', 'bpva_assignment_fk')
+                ->references('id')
+                ->on('driver_assignments')
+                ->cascadeOnDelete();
+
+            $table->unique('booking_participant_id', 'bpva_participant_unique');
+            $table->index(['booking_id', 'driver_assignment_id'], 'bpva_booking_assignment_idx');
         });
     }
 
