@@ -95,6 +95,8 @@ Jobs:
 - `MySQL concurrency suite` on PHP 8.4 with MySQL 8.4.
 
 CI preparation does not call `php artisan optimize:clear` before database configuration because Laravel's cache clear may access the configured database cache store.
+The MySQL suite calls `vendor/bin/phpunit -c phpunit.mysql.xml` directly so PHPUnit receives one configuration file only.
+MySQL constraint and index names on long tables must be explicitly shortened to stay under MySQL's 64-character identifier limit.
 
 ## Critical tests
 
@@ -113,12 +115,15 @@ CI preparation does not call `php artisan optimize:clear` before database config
 ## Verification status and limitations
 
 - GitHub Actions is the primary autonomous runtime validator.
-- Do not claim a job passes until its workflow result is available.
+- OpenAPI lint and SQLite feature suite were confirmed passing after CI bootstrap fixes.
+- MySQL concurrency suite previously failed during migration because an automatically generated foreign-key name exceeded MySQL's 64-character limit; explicit short constraint names were added.
+- Do not claim the MySQL concurrency suite passes until the next workflow result is available.
 - Standard suite uses SQLite memory; row-lock concurrency uses the dedicated MySQL suite.
-- OpenAPI is linted by Redocly on each workflow run.
 
 ## Latest relevant commits
 
+- `8c7b4e66bfccecfb0a261aae1475fea3547fb2b8` — run MySQL suite directly with the dedicated PHPUnit configuration.
+- `6f184729d969067611c9a5085066fab0de6a9179` — shorten participant-allocation MySQL constraint and index names.
 - `d0504a94fc49f40ce2b1880673bcb08fc7a9961a` — configure Redocly rules for the current OpenAPI contract.
 - `c478749e12c4a5df456d275abc3ed156fcba6ed6` — create SQLite database and avoid premature database cache clearing in CI.
 - `7f088a9eb02ec75f66d0a0140bc28e2932deb336` — align spec to OpenAPI 3.0.3.
@@ -126,7 +131,7 @@ CI preparation does not call `php artisan optimize:clear` before database config
 
 ## Next progress list
 
-1. Inspect and fix remaining GitHub Actions test failures.
+1. Inspect the next MySQL concurrency workflow result and fix any remaining MySQL-specific migration/test issue.
 2. Expand OpenAPI to remaining admin endpoints and exact response schemas.
 3. Configure production queue worker/supervision.
 4. Add reporting/dashboard metrics.
