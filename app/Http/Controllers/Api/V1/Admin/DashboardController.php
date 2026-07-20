@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,7 +78,7 @@ class DashboardController extends Controller
                 'period' => [
                     'date_from' => $from->toDateString(),
                     'date_to' => $to->toDateString(),
-                    'days' => $from->diffInDays($to) + 1,
+                    'days' => (int) $from->diffInDays($to) + 1,
                 ],
                 'bookings' => [
                     'total' => array_sum($bookingStatuses),
@@ -109,7 +110,7 @@ class DashboardController extends Controller
                     'total' => DB::table('vehicles')->count(),
                     'approved' => DB::table('vehicles')->where('verification_status', 'approved')->count(),
                     'pending_verification' => DB::table('vehicles')->where('verification_status', 'pending')->count(),
-                    'available' => DB::table('vehicles')->where('availability_status', 'available')->count(),
+                    'available' => DB::table('vehicles')->where('status', 'available')->count(),
                 ],
                 'withdrawals' => [
                     'total' => array_sum($withdrawalStatuses),
@@ -123,7 +124,7 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function countsByStatus($query, array $statuses): array
+    private function countsByStatus(Builder $query, array $statuses): array
     {
         $counts = $query
             ->select('status', DB::raw('COUNT(*) as aggregate'))
