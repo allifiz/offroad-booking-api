@@ -4,93 +4,70 @@
 
 - Project: Offroad Booking Web App
 - Repository: `allifiz/offroad-booking-api`
-- Backend/API: Laravel 13
+- Backend/API and web clients: Laravel 13
 - Database: MySQL/MariaDB
-- Authentication: Laravel Sanctum
-- Admin and customer clients: Laravel web
+- API authentication: Laravel Sanctum
+- Admin web authentication: Laravel session
 - Driver client: Flutter native
 - Main branch: `main`
 - Local path: `C:\Projects\offroad-booking-api`
 
 ## Mandatory workflow
 
-1. Inspect models, migrations, controllers, routes, tests, queue behavior, deployment scripts, and API documentation before changing behavior.
-2. Apply backend changes directly to `main`, unless the user requests another branch.
+1. Inspect models, migrations, controllers, routes, tests, queue behavior, deployment scripts, frontend assets, and API documentation before changing behavior.
+2. Apply changes directly to `main`, unless the user requests another branch.
 3. Never expose real secrets or claim tests pass unless CI/runtime confirms them.
 4. Update this file and `PROJECT_PROGRESS.md` after project changes.
-5. Keep `docs/openapi.yaml` synchronized with endpoint and payload changes.
+5. Keep `docs/openapi.yaml` synchronized with API endpoint and payload changes.
 6. After backend changes respond in this order: Changes, Endpoint changes, Cara pull changes, cURL Postman, Expected result cURL.
 
 ## Implemented system
 
-- Customer registration/profile, bookings, participants, payments, and ownership isolation.
-- Driver registration/profile/verification, documents, vehicles/media, assignments, points, and withdrawals.
-- Strict booking state transitions, travel groups, allocation, and completion rewards.
-- Audit logs, queued notifications, notification inbox, and risk-based rate limits.
-- MySQL row locking and concurrent withdrawal integration coverage.
-- Autonomous GitHub Actions: OpenAPI lint, SQLite suite, and MySQL concurrency suite.
+- Complete customer, booking, payment, driver, vehicle, assignment, allocation, reward, withdrawal, audit, and notification API flows.
+- Risk-based rate limiting, queued notifications, MySQL concurrency protection, reporting, CSV export, health checks, backup/deploy scripts, and autonomous CI.
+- GitHub Actions jobs: OpenAPI lint, SQLite suite, and MySQL concurrency suite.
 
-## Production queue
+## Admin web foundation
 
-- `OperationalNotification` queue: `notifications`.
-- 5 tries, 30-second timeout, fail on timeout, backoff `[10, 60, 300, 900]`.
-- Queue health:
-  - `php artisan queue:health`
-  - `php artisan queue:health --json`
+- Routes:
+  - `GET /admin/login`
+  - `POST /admin/login`
+  - `GET /admin`
+  - `POST /admin/logout`
+- Uses Laravel session authentication; only active users with role `admin` may log in.
+- `EnsureAdminWeb` returns a web `403` for authenticated non-admin users.
+- Dashboard uses direct database queries, not internal HTTP calls to the API.
+- Current dashboard includes period filtering, booking/payment cards, operational queues, and recent bookings.
+- Blade pages:
+  - `resources/views/admin/auth/login.blade.php`
+  - `resources/views/admin/dashboard.blade.php`
+- Test: `AdminWebFlowTest`.
+
+## Production operations
+
+- Queue health: `php artisan queue:health` and `--json`.
+- Application health: `php artisan app:health` and `--json`.
 - Supervisor: `deploy/supervisor/offroad-booking-worker.conf`.
-- Guide: `docs/QUEUE_PRODUCTION.md`.
-
-## Admin reporting
-
-- Dashboard: `GET /api/v1/admin/dashboard`.
-- CSV exports:
-  - `GET /api/v1/admin/reports/export/bookings`
-  - `GET /api/v1/admin/reports/export/payments`
-  - `GET /api/v1/admin/reports/export/drivers`
-  - `GET /api/v1/admin/reports/export/withdrawals`
-- CSV output is streamed, UTF-8 BOM, no-store, nosniff, and formula-prefix neutralized.
-- Guides: `docs/ADMIN_DASHBOARD.md`, `docs/CSV_REPORTS.md`.
-
-## Production deployment and monitoring
-
-- Application health:
-  - `php artisan app:health`
-  - `php artisan app:health --json`
-- Checks database connectivity, writable default storage, and queue tables.
 - Deploy script: `deploy/scripts/deploy.sh`.
 - Backup script: `deploy/scripts/backup.sh`.
-- Backups include compressed MySQL dump, public storage archive, protected `.env` copy, and SHA-256 checksums.
-- Default backup retention: 14 days.
-- Deployment/recovery runbook: `docs/PRODUCTION_DEPLOYMENT.md`.
-- Deployment must run backup first, migrate with `--force`, rebuild caches, restart workers, and pass `app:health` before reopening.
+- Runbooks: `docs/QUEUE_PRODUCTION.md`, `docs/PRODUCTION_DEPLOYMENT.md`.
 
-## Critical tests
+## Admin reporting API
 
-- `DriverWithdrawalFlowTest`
-- `BookingStateAndRewardFlowTest`
-- `PaymentFlowTest`
-- `DriverAssignmentResponseFlowTest`
-- `ParticipantAllocationFlowTest`
-- `DriverVehicleCrudFlowTest`
-- `VehicleMediaFlowTest`
-- `AuditLogFlowTest`
-- `NotificationFlowTest`
-- `RateLimitFlowTest`
-- `QueueHealthFlowTest`
-- `AdminDashboardFlowTest`
-- `AdminReportExportFlowTest`
-- `ApplicationHealthFlowTest`
-- `tests/Integration/MySql/ConcurrentWithdrawalTest.php`
+- `GET /api/v1/admin/dashboard`.
+- CSV exports for bookings, payments, drivers, and withdrawals.
+- Guides: `docs/ADMIN_DASHBOARD.md`, `docs/CSV_REPORTS.md`.
 
 ## Verification status
 
-- CI was green before the newest CSV/deployment changes.
-- Current CI must be checked before claiming the new report and health tests pass.
+- CI was confirmed green before the admin web foundation changes.
+- Do not claim `AdminWebFlowTest` passes until the new CI run is confirmed.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Fix any current CI failure.
-2. Expand canonical OpenAPI for dashboard, CSV reports, exact schemas, and remaining admin CRUD endpoints.
-3. Add external alert delivery and scheduled backup verification.
-4. Start frontend Laravel admin/customer and Flutter driver integration.
+1. Inspect and fix any admin web CI failure.
+2. Build admin payment verification list/detail/actions.
+3. Build booking operations, driver/vehicle verification, withdrawals, reports, and audit pages.
+4. Finish canonical OpenAPI dashboard/CSV/admin schemas.
+5. Start customer web and Flutter driver integration.
