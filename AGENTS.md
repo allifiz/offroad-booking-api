@@ -54,8 +54,8 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Operational notifications are stored in the database and dispatched through Laravel queue after transaction commit.
 - Notification ownership is isolated.
 - Rate limiting is risk-based: login by email+IP, public registration by IP, authenticated reads by user, uploads by user, withdrawals by driver, and admin writes by admin.
-- Backend tests and OpenAPI lint must run autonomously through GitHub Actions on every push or pull request to `main`.
-- OpenAPI 3.1 at `docs/openapi.yaml` is the canonical API contract.
+- Backend tests and OpenAPI lint run autonomously through GitHub Actions on every push or pull request to `main`.
+- OpenAPI 3.0.3 at `docs/openapi.yaml` is the canonical API contract.
 
 ## Implemented progress
 
@@ -81,8 +81,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
   - `file-upload`: 10/minute per user/IP
   - `withdrawal-request`: 3/hour per user/IP
   - `admin-write`: 60/minute per user/IP
-- OpenAPI 3.1 specification documents public, auth, notification, customer, driver, and core admin operations.
-- Reusable schemas cover Bearer auth, common errors, pagination, uploads, `429` headers, and main request payloads.
+- OpenAPI specification documents public, auth, notification, customer, driver, and core admin operations.
 - `docs/README.md` explains Redoc preview, Swagger UI preview, linting, and Postman import.
 
 ### Autonomous CI
@@ -91,13 +90,13 @@ Workflow: `.github/workflows/backend-tests.yml`.
 
 Jobs:
 
-- `OpenAPI lint` using `@redocly/cli`.
-- `SQLite feature suite` on PHP 8.3.
-- `MySQL concurrency suite` with MySQL 8.4.
+- `OpenAPI lint` using `@redocly/cli` and `redocly.yaml`.
+- `SQLite feature suite` on PHP 8.4; creates `database/database.sqlite` before Laravel bootstrap.
+- `MySQL concurrency suite` on PHP 8.4 with MySQL 8.4.
 
-The workflow runs on pushes and pull requests targeting `main`, plus manual `workflow_dispatch`.
+CI preparation does not call `php artisan optimize:clear` before database configuration because Laravel's cache clear may access the configured database cache store.
 
-### Critical tests
+## Critical tests
 
 - `DriverWithdrawalFlowTest`
 - `BookingStateAndRewardFlowTest`
@@ -111,13 +110,6 @@ The workflow runs on pushes and pull requests targeting `main`, plus manual `wor
 - `RateLimitFlowTest`
 - `tests/Integration/MySql/ConcurrentWithdrawalTest.php`
 
-## MySQL concurrency test setup
-
-- Dedicated config: `phpunit.mysql.xml`.
-- Default database: `offroad_booking_test` on `127.0.0.1:3306`, user `root`, empty password.
-- Test executes `migrate:fresh`; never point it at development or production.
-- Internal worker command: `php artisan withdrawal:attempt`.
-
 ## Verification status and limitations
 
 - GitHub Actions is the primary autonomous runtime validator.
@@ -125,29 +117,17 @@ The workflow runs on pushes and pull requests targeting `main`, plus manual `wor
 - Standard suite uses SQLite memory; row-lock concurrency uses the dedicated MySQL suite.
 - OpenAPI is linted by Redocly on each workflow run.
 
-Local fallback:
-
-```powershell
-php artisan optimize:clear
-php artisan migrate
-php artisan test
-php artisan test --configuration=phpunit.mysql.xml
-npx --yes @redocly/cli@latest lint docs/openapi.yaml
-```
-
 ## Latest relevant commits
 
-- `f96ac069d5815b7f305a62d046574268c2094306` — OpenAPI usage guide.
-- `536a6e05b620824aa14db5e0d89ea13521ef7359` — add OpenAPI lint CI job.
-- `799d9be90d821965d4d8b764531a1f4ded47a857` — add OpenAPI 3.1 contract.
-- `a03fdc0c4c79c3eba83da676a152691d9c109c8a` — autonomous SQLite/MySQL CI.
-- `e20b6c716142e4420a43be4453ebbee3e3fbe7f7` — public rate-limit tests.
-- `89c5df69849a86451eafd675ae50c1bbcded4eb6` — MySQL concurrent withdrawal test.
+- `d0504a94fc49f40ce2b1880673bcb08fc7a9961a` — configure Redocly rules for the current OpenAPI contract.
+- `c478749e12c4a5df456d275abc3ed156fcba6ed6` — create SQLite database and avoid premature database cache clearing in CI.
+- `7f088a9eb02ec75f66d0a0140bc28e2932deb336` — align spec to OpenAPI 3.0.3.
+- `f6504349b594d9dbf7c8db421e97f85bab212ba3` — run CI with PHP 8.4.
 
 ## Next progress list
 
-1. Inspect and fix GitHub Actions failures when results are available.
-2. Expand OpenAPI to every remaining admin CRUD/list endpoint and exact response schemas.
+1. Inspect and fix remaining GitHub Actions test failures.
+2. Expand OpenAPI to remaining admin endpoints and exact response schemas.
 3. Configure production queue worker/supervision.
 4. Add reporting/dashboard metrics.
 5. Prepare backup, deployment, monitoring, and client integration.
