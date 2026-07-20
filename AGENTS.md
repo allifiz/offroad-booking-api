@@ -37,11 +37,12 @@
 ## Admin web
 
 - Session routes: `/admin/login`, `/admin`, `/admin/logout`.
-- Dashboard, payment verification, and booking operations are implemented.
-- Booking routes support list/detail, status transition, assignment offer/cancel, and participant allocation.
-- Participant allocation only accepts assignments with status `accepted`, enforces booking ownership and vehicle capacity, and uses one allocation per participant.
-- Booking completion from Admin Web now uses `BookingLifecycleService`, so driver rewards match the API flow.
-- Tests: `AdminWebFlowTest`, `AdminWebPaymentFlowTest`, `AdminWebBookingFlowTest`, and `AdminWebBookingLifecycleFlowTest`.
+- Dashboard, payment verification, booking operations, participant allocation, and driver/vehicle verification are implemented.
+- Driver queue supports status filtering plus name/email/license/identity search.
+- Driver detail shows profile, uploaded documents, vehicles, and prior verification result.
+- Driver approval sets `verification_status=approved` and operational `status=available`; rejection sets `status=unavailable` and requires a reason.
+- Vehicle approval/rejection follows the same activation rule and verifies vehicle ownership under the selected driver profile.
+- Tests include `AdminWebDriverVerificationFlowTest` in addition to existing admin web tests.
 
 ## Production operations
 
@@ -54,14 +55,14 @@
 
 ## Verification status
 
-- CI was confirmed green before the shared lifecycle/admin allocation changes.
-- Do not claim `AdminWebBookingLifecycleFlowTest` or the lifecycle refactor passes until the newest CI run is confirmed.
+- CI was confirmed green before the admin driver/vehicle verification changes.
+- Do not claim `AdminWebDriverVerificationFlowTest` passes until the newest CI run is confirmed.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Inspect and fix any lifecycle/allocation CI failure.
-2. Build driver and vehicle verification pages.
-3. Build withdrawal, reports, and audit pages.
+1. Inspect and fix any driver/vehicle verification CI failure.
+2. Build withdrawal operations pages.
+3. Build reports and audit pages.
 4. Finish canonical OpenAPI dashboard/CSV/admin schemas.
 5. Start customer web and Flutter driver integration.
