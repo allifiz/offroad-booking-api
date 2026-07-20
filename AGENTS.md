@@ -53,6 +53,7 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Operational notifications are stored in the database and dispatched through Laravel queue after transaction commit.
 - Notification ownership is isolated.
 - Rate limiting is risk-based: login by email+IP, public registration by IP, authenticated reads by user, uploads by user, withdrawals by driver, and admin writes by admin.
+- Backend tests must run autonomously through GitHub Actions on every push or pull request to `main`.
 
 ## Implemented progress
 
@@ -79,6 +80,14 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
   - `withdrawal-request`: 3/hour per user/IP
   - `admin-write`: 60/minute per user/IP
 
+### Autonomous CI
+
+- Workflow: `.github/workflows/backend-tests.yml`.
+- Runs on pushes and pull requests targeting `main`, plus manual `workflow_dispatch`.
+- Job `SQLite feature suite` runs the complete default Laravel test suite on PHP 8.3.
+- Job `MySQL concurrency suite` provisions MySQL 8.4 and runs `phpunit.mysql.xml`.
+- Composer dependencies are cached and concurrent runs for the same ref are cancelled.
+
 ### Critical tests
 
 - `DriverWithdrawalFlowTest`
@@ -102,33 +111,30 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 
 ## Verification status and limitations
 
-- Runtime tests were not executed in this environment because the GitHub connector has no PHP or MySQL runtime.
+- GitHub Actions now executes runtime tests automatically.
+- The connector did not expose a check result immediately after workflow creation, so the first CI run result is not yet confirmed here.
 - Standard suite uses SQLite memory; row-lock concurrency uses the dedicated MySQL suite.
-- Rate-limit tests were added but still need local execution.
-- Run locally:
+- Local fallback:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
-php artisan test --filter=RateLimitFlowTest
 php artisan test
 php artisan test --configuration=phpunit.mysql.xml
 ```
 
 ## Latest relevant commits
 
+- `a03fdc0c4c79c3eba83da676a152691d9c109c8a` — add autonomous SQLite and MySQL GitHub Actions jobs.
 - `e20b6c716142e4420a43be4453ebbee3e3fbe7f7` — public rate-limit feature tests.
 - `8b2b92e8cef1f2a5c16ea640ae103eaf0794cb45` — apply rate-limit middleware to routes.
 - `615d775963c0a6ab5c372221af0794c17b4b9747` — configure named API rate limiters.
 - `89c5df69849a86451eafd675ae50c1bbcded4eb6` — MySQL concurrent withdrawal test.
-- `038c50f470af8899a4313505529d8b4ad81607a8` — notification feature tests.
-- `a92900d5a7a52a3a95a4faabf29aba28a81c4830` — audit-log feature tests.
 
 ## Next progress list
 
-1. Run/fix standard full suite.
-2. Run/fix dedicated MySQL concurrency suite.
-3. Add OpenAPI documentation.
-4. Configure production queue worker/supervision.
-5. Add reporting/dashboard metrics.
-6. Prepare backup, deployment, monitoring, and client integration.
+1. Inspect and fix the first GitHub Actions failures, if any.
+2. Add OpenAPI documentation.
+3. Configure production queue worker/supervision.
+4. Add reporting/dashboard metrics.
+5. Prepare backup, deployment, monitoring, and client integration.
