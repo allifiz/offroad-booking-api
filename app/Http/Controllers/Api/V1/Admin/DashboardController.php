@@ -40,7 +40,7 @@ class DashboardController extends Controller
             'pending', 'confirmed', 'ongoing', 'completed', 'cancelled',
         ]);
         $paymentStatuses = $this->countsByStatus(clone $paymentBase, [
-            'pending', 'approved', 'rejected',
+            'unpaid', 'pending', 'paid', 'refunded', 'failed',
         ]);
         $withdrawalStatuses = $this->countsByStatus(clone $withdrawalBase, [
             'pending', 'approved', 'rejected', 'paid',
@@ -54,8 +54,8 @@ class DashboardController extends Controller
             ->keyBy('date');
 
         $paymentTrend = (clone $paymentBase)
-            ->where('status', 'approved')
-            ->selectRaw('DATE(created_at) as date, COALESCE(SUM(amount), 0) as approved_revenue')
+            ->where('status', 'paid')
+            ->selectRaw('DATE(created_at) as date, COALESCE(SUM(amount), 0) as paid_revenue')
             ->groupByRaw('DATE(created_at)')
             ->orderBy('date')
             ->get()
@@ -68,7 +68,7 @@ class DashboardController extends Controller
                 'date' => $key,
                 'bookings' => (int) ($bookingTrend[$key]->bookings ?? 0),
                 'gross_booking_value' => (float) ($bookingTrend[$key]->gross_booking_value ?? 0),
-                'approved_revenue' => (float) ($paymentTrend[$key]->approved_revenue ?? 0),
+                'paid_revenue' => (float) ($paymentTrend[$key]->paid_revenue ?? 0),
             ]);
         }
 
@@ -91,11 +91,14 @@ class DashboardController extends Controller
                 'payments' => [
                     'total' => array_sum($paymentStatuses),
                     'by_status' => $paymentStatuses,
-                    'approved_revenue' => (float) (clone $paymentBase)
-                        ->where('status', 'approved')
+                    'paid_revenue' => (float) (clone $paymentBase)
+                        ->where('status', 'paid')
                         ->sum('amount'),
                     'pending_amount' => (float) (clone $paymentBase)
                         ->where('status', 'pending')
+                        ->sum('amount'),
+                    'refunded_amount' => (float) (clone $paymentBase)
+                        ->where('status', 'refunded')
                         ->sum('amount'),
                 ],
                 'drivers' => [
