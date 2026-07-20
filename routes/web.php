@@ -3,6 +3,7 @@
 use App\Http\Controllers\Web\Admin\AuthController;
 use App\Http\Controllers\Web\Admin\BookingController;
 use App\Http\Controllers\Web\Admin\DashboardController;
+use App\Http\Controllers\Web\Admin\DriverVerificationController;
 use App\Http\Controllers\Web\Admin\PaymentController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,12 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
         Route::patch('/payments/{payment}', [PaymentController::class, 'update'])->name('payments.update');
+
+        Route::get('/drivers', [DriverVerificationController::class, 'index'])->name('drivers.index');
+        Route::get('/drivers/{driverProfile}', [DriverVerificationController::class, 'show'])->name('drivers.show');
+        Route::patch('/drivers/{driverProfile}', [DriverVerificationController::class, 'updateDriver'])->name('drivers.update');
+        Route::patch('/drivers/{driverProfile}/vehicles/{vehicle}', [DriverVerificationController::class, 'updateVehicle'])->name('drivers.vehicles.update');
+
         Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     });
 });
