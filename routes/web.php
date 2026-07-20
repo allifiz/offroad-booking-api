@@ -1,7 +1,19 @@
 <?php
 
+use App\Http\Controllers\Web\Admin\AuthController;
+use App\Http\Controllers\Web\Admin\DashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+Route::redirect('/', '/admin');
+
+Route::prefix('admin')->name('admin.')->group(function (): void {
+    Route::middleware('guest')->group(function (): void {
+        Route::get('/login', [AuthController::class, 'create'])->name('login');
+        Route::post('/login', [AuthController::class, 'store'])->name('login.store');
+    });
+
+    Route::middleware(['auth', 'admin.web'])->group(function (): void {
+        Route::get('/', DashboardController::class)->name('dashboard');
+        Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+    });
 });
