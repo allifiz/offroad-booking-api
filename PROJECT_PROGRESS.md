@@ -8,55 +8,60 @@ Local path: `C:\Projects\offroad-booking-api`
 ## Current status
 
 - Backend core MVP: approximately 99%.
-- Backend production readiness: approximately 96–97%.
-- Laravel admin web: authentication, dashboard, payment verification, booking operations, lifecycle completion, participant allocation, and driver/vehicle verification implemented.
+- Backend production readiness: approximately 97%.
+- Laravel admin web: authentication, dashboard, payment verification, booking operations, lifecycle completion, participant allocation, driver/vehicle verification, and withdrawal processing implemented.
 
-## Shared booking lifecycle
+## Shared lifecycle services
 
-Canonical service: `app/Services/BookingLifecycleService.php`.
+Canonical services:
 
-Responsibilities:
+```text
+app/Services/BookingLifecycleService.php
+app/Services/WithdrawalService.php
+```
 
-- strict booking transition validation
-- paid-booking and accepted-assignment requirements
-- row locking and transaction retry
-- cancellation propagation
-- completion reward distribution
-- idempotent point-ledger creation
+`WithdrawalService` now handles:
 
-Both API and Admin Web use the same service for status transitions.
+- driver withdrawal requests
+- pending to approved/rejected transitions
+- approved to paid transition
+- row locking on withdrawal and driver profile
+- transaction retry up to three times
+- held-point release after rejection
+- held-point debit after payment
+- HOLD, RELEASE, and DEBIT point-ledger entries
 
-## Admin driver and vehicle verification
+Both API and Admin Web use the same withdrawal transition implementation.
+
+## Admin withdrawal operations
 
 Routes:
 
 ```text
-GET   /admin/drivers
-GET   /admin/drivers/{driverProfile}
-PATCH /admin/drivers/{driverProfile}
-PATCH /admin/drivers/{driverProfile}/vehicles/{vehicle}
+GET   /admin/withdrawals
+GET   /admin/withdrawals/{withdrawal}
+PATCH /admin/withdrawals/{withdrawal}
 ```
 
 Implemented:
 
-- driver verification queue with status filters
-- search by driver name, email, license number, or identity number
-- driver profile and document review
-- vehicle list and document metadata on driver detail
-- driver approve/reject with mandatory rejection reason
-- vehicle approve/reject with mandatory rejection reason
-- approval activates driver/vehicle as `available`
-- rejection forces driver/vehicle to `unavailable`
-- verifier and verification timestamp are recorded
-- nested vehicle ownership is checked before mutation
+- withdrawal queue with status filter
+- search by driver name or email
+- payout detail with bank and account data
+- driver available and held balance display
+- approve pending withdrawal
+- reject pending withdrawal with mandatory reason
+- mark approved withdrawal as paid
+- processor and processed timestamp recording
+- safe balance mutation through `WithdrawalService`
 
 Files:
 
 ```text
-app/Http/Controllers/Web/Admin/DriverVerificationController.php
-resources/views/admin/drivers/index.blade.php
-resources/views/admin/drivers/show.blade.php
-tests/Feature/AdminWebDriverVerificationFlowTest.php
+app/Http/Controllers/Web/Admin/WithdrawalController.php
+resources/views/admin/withdrawals/index.blade.php
+resources/views/admin/withdrawals/show.blade.php
+tests/Feature/AdminWebWithdrawalFlowTest.php
 ```
 
 ## Existing production operations
@@ -81,7 +86,7 @@ docs/PRODUCTION_DEPLOYMENT.md
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-CI was confirmed green before the driver/vehicle verification web changes. Do not claim the new verification test passes until the latest workflow result is confirmed.
+CI was confirmed green before the admin withdrawal and WithdrawalService refactor. Do not claim the new web withdrawal test passes until the latest workflow result is confirmed.
 
 ## API documentation
 
@@ -91,11 +96,10 @@ Web-only routes are not part of OpenAPI. Canonical OpenAPI still needs dashboard
 
 ## Next recommended work
 
-1. Inspect and fix any driver/vehicle verification CI failure.
-2. Implement withdrawal operations pages.
-3. Implement reports and audit pages.
-4. Complete canonical OpenAPI coverage.
-5. Start customer web and Flutter driver integration.
+1. Inspect and fix any withdrawal CI failure.
+2. Implement reports and audit pages.
+3. Complete canonical OpenAPI coverage.
+4. Start customer web and Flutter driver integration.
 
 ## Response format rule
 
