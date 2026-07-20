@@ -1,30 +1,53 @@
-# Offroad Booking API — Project Progress Checkpoint
+# Offroad Booking — Project Progress Checkpoint
 
 Last updated: 2026-07-20 (Asia/Jakarta)
 Branch: `main`
 Repository: `allifiz/offroad-booking-api`
 Local path: `C:\Projects\offroad-booking-api`
 
-## Current backend status
+## Current status
 
-Estimated progress:
+- Backend core MVP: approximately 99%.
+- Backend production readiness: approximately 96%.
+- Laravel admin web: foundation implemented.
 
-- Core functional MVP: approximately 99%
-- Production readiness: approximately 96%
+Backend includes the complete booking/payment/assignment/allocation/reward/withdrawal flow, audit logs, notifications, rate limiting, queue hardening, reporting, CSV exports, health checks, deployment, backup, and recovery tooling.
 
-Implemented end-to-end:
+## Laravel admin web foundation
 
-- booking, payment, assignment, allocation, completion reward, withdrawal
-- audit logs, notifications, rate limiting
-- queue hardening and queue health
-- admin dashboard metrics
-- streamed CSV reports
-- application health checks
-- production deployment, backup, and recovery scripts
+Routes:
 
-## Production health
+```text
+GET  /admin/login
+POST /admin/login
+GET  /admin
+POST /admin/logout
+```
 
-Commands:
+Implemented:
+
+- Laravel session login for active admin users.
+- Session regeneration after login and invalidation after logout.
+- Separate `admin.web` middleware for browser-safe authorization behavior.
+- Responsive Blade login page.
+- Responsive admin shell/sidebar.
+- Dashboard period filter.
+- Booking, booking-value, payment, and operational-queue cards.
+- Recent booking table.
+- Direct database reads rather than internal API-over-HTTP calls.
+- Feature coverage in `tests/Feature/AdminWebFlowTest.php`.
+
+Files:
+
+```text
+app/Http/Middleware/EnsureAdminWeb.php
+app/Http/Controllers/Web/Admin/AuthController.php
+app/Http/Controllers/Web/Admin/DashboardController.php
+resources/views/admin/auth/login.blade.php
+resources/views/admin/dashboard.blade.php
+```
+
+## Existing production operations
 
 ```bash
 php artisan app:health
@@ -33,17 +56,7 @@ php artisan queue:health
 php artisan queue:health --json
 ```
 
-`app:health` verifies:
-
-- database connectivity
-- writable default storage
-- accessible `jobs` and `failed_jobs` tables
-
-Test: `tests/Feature/ApplicationHealthFlowTest.php`.
-
-## Deployment and backup
-
-Files:
+Deployment and backup:
 
 ```text
 deploy/scripts/deploy.sh
@@ -52,73 +65,25 @@ deploy/supervisor/offroad-booking-worker.conf
 docs/PRODUCTION_DEPLOYMENT.md
 ```
 
-Deployment behavior:
-
-- maintenance mode with automatic recovery trap
-- fetch/reset to configured branch
-- production Composer install
-- forced migrations
-- storage link
-- cache rebuild
-- queue restart
-- application health gate before reopening
-
-Backup behavior:
-
-- compressed transactional MySQL dump
-- compressed `storage/app/public`
-- protected `.env` backup
-- SHA-256 checksums
-- default 14-day retention
-
-## Admin reporting
-
-Dashboard:
-
-```text
-GET /api/v1/admin/dashboard
-```
-
-CSV exports:
-
-```text
-GET /api/v1/admin/reports/export/bookings
-GET /api/v1/admin/reports/export/payments
-GET /api/v1/admin/reports/export/drivers
-GET /api/v1/admin/reports/export/withdrawals
-```
-
 ## Autonomous CI
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-Previously confirmed green:
-
-- OpenAPI lint
-- SQLite feature suite
-- MySQL concurrent-withdrawal suite
-
-The newest reporting/deployment commits trigger a new run. Do not claim `AdminReportExportFlowTest` or `ApplicationHealthFlowTest` passes until GitHub reports it.
+CI was confirmed green immediately before the admin web changes. Do not claim `AdminWebFlowTest` passes until the new workflow result is confirmed.
 
 ## API documentation
 
 Canonical contract: `docs/openapi.yaml`.
 
-Operational guides:
-
-- `docs/ADMIN_DASHBOARD.md`
-- `docs/CSV_REPORTS.md`
-- `docs/QUEUE_PRODUCTION.md`
-- `docs/PRODUCTION_DEPLOYMENT.md`
-
-The canonical OpenAPI still needs expansion for dashboard, CSV responses, exact schemas, and remaining admin CRUD operations.
+The canonical OpenAPI still needs dashboard, CSV response, exact schema, and remaining admin CRUD coverage. Web-only routes are not part of the OpenAPI contract.
 
 ## Next recommended work
 
-1. Inspect and fix current CI failures, if any.
-2. Complete canonical OpenAPI coverage.
-3. Add external monitoring/alert delivery and backup restore verification.
-4. Start Laravel admin/customer frontend and Flutter driver integration.
+1. Inspect and fix any admin web CI failure.
+2. Implement admin payment verification page and actions.
+3. Implement booking operations and assignment/allocation pages.
+4. Implement driver, vehicle, withdrawal, reports, and audit pages.
+5. Start customer web and Flutter driver integration.
 
 ## Response format rule
 
