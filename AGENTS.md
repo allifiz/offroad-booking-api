@@ -34,6 +34,7 @@
 - Operational notifications are queued after transaction commit.
 - API rate limiting is risk-based.
 - OpenAPI lint and all backend tests run autonomously in GitHub Actions.
+- Dashboard period metrics use record `created_at`; driver and vehicle metrics are current snapshots.
 
 ## Implemented progress
 
@@ -47,28 +48,32 @@
 ### Production queue hardening
 
 - Queue database tables already exist in `0001_01_01_000002_create_jobs_table.php`.
-- `OperationalNotification` uses queue `notifications`, dispatches after commit, and has:
-  - 5 tries
-  - 30 second timeout
-  - fail on timeout
-  - backoff `[10, 60, 300, 900]`
+- `OperationalNotification` uses queue `notifications`, dispatches after commit, and has 5 tries, a 30-second timeout, fail-on-timeout, and backoff `[10, 60, 300, 900]`.
 - `config/queue_health.php` defines pending, stale, and failed job thresholds.
-- `php artisan queue:health` provides human-readable queue status.
-- `php artisan queue:health --json` provides machine-readable status and exits non-zero when unhealthy.
+- `php artisan queue:health` and `php artisan queue:health --json` expose queue status.
 - Supervisor config: `deploy/supervisor/offroad-booking-worker.conf`.
 - Operations guide: `docs/QUEUE_PRODUCTION.md`.
-- `.env.example` documents database queue, retry-after, failed-job, and health threshold variables.
 - `DB_QUEUE_RETRY_AFTER` must remain greater than the worker timeout.
+
+### Admin dashboard metrics
+
+- Endpoint: `GET /api/v1/admin/dashboard`.
+- Optional `date_from` and `date_to`; default latest 30 days; maximum 366 days.
+- Period metrics: bookings by status, participants, gross booking value, payments by status, paid/pending/refunded amounts, withdrawals by status, requested points, paid and pending withdrawal amounts.
+- Current snapshot metrics: driver verification/availability/available and held points; vehicle verification/availability.
+- Daily trend is zero-filled for every day in the selected period and includes bookings, gross booking value, and paid revenue.
+- Customer and driver roles receive `403`.
+- Documentation: `docs/ADMIN_DASHBOARD.md`.
 
 ### Autonomous CI
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-Confirmed jobs:
+Confirmed before dashboard changes:
 
 - OpenAPI lint: passing.
 - SQLite feature suite: passing.
-- MySQL concurrency suite: passing after shortening MySQL identifiers and invoking PHPUnit directly.
+- MySQL concurrency suite: passing.
 
 ### Critical tests
 
@@ -83,17 +88,18 @@ Confirmed jobs:
 - `NotificationFlowTest`
 - `RateLimitFlowTest`
 - `QueueHealthFlowTest`
+- `AdminDashboardFlowTest`
 - `tests/Integration/MySql/ConcurrentWithdrawalTest.php`
 
 ## Verification status
 
-- Existing CI was green before queue hardening.
-- Queue hardening changes are committed and the new CI run must be checked before claiming `QueueHealthFlowTest` passes.
+- Existing CI was green before admin dashboard changes.
+- Dashboard and queue-hardening changes are committed; the current CI run must be checked before claiming their new tests pass.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Inspect and fix any queue-hardening CI failure.
-2. Add admin reporting/dashboard metrics.
+1. Inspect and fix any dashboard/queue CI failure.
+2. Add downloadable CSV reports for bookings, payments, drivers, and withdrawals.
 3. Expand OpenAPI exact response schemas and remaining admin CRUD endpoints.
 4. Prepare backup, deployment, monitoring, and frontend/Flutter integration.
