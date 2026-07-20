@@ -9,10 +9,10 @@ Local path: `C:\Projects\offroad-booking-api`
 
 Estimated progress:
 
-- Core functional MVP: approximately 97–98%
-- Production readiness: approximately 92–94%
+- Core functional MVP: approximately 98–99%
+- Production readiness: approximately 94–95%
 
-The complete booking, payment, assignment, allocation, completion reward, withdrawal, audit, notification, rate-limit, queue-hardening, and initial admin reporting flows are implemented.
+The complete booking, payment, assignment, allocation, completion reward, withdrawal, audit, notification, rate-limit, queue-hardening, dashboard, and CSV reporting flows are implemented.
 
 ## Production queue hardening
 
@@ -41,29 +41,9 @@ Endpoint:
 GET /api/v1/admin/dashboard
 ```
 
-Query parameters:
+Supports `date_from` and `date_to`, defaults to the latest 30 days, and limits the period to 366 days.
 
-- `date_from` optional
-- `date_to` optional
-- default latest 30 days
-- maximum range 366 days
-
-Metrics:
-
-- bookings by status
-- participant count
-- gross booking value excluding cancelled bookings
-- payments by `unpaid`, `pending`, `paid`, `refunded`, and `failed`
-- paid revenue, pending amount, and refunded amount
-- driver total, verification, availability, available points, and held points
-- vehicle total, verification, and availability
-- withdrawals by status, requested points, paid amount, and pending amount
-- zero-filled daily trend for bookings, booking value, and paid revenue
-
-Authorization:
-
-- admin only
-- customer/driver receive `403`
+Metrics include bookings, participants, booking value, payments/revenue, driver and vehicle snapshots, withdrawals, and zero-filled daily trends.
 
 Files:
 
@@ -71,30 +51,63 @@ Files:
 - `tests/Feature/AdminDashboardFlowTest.php`
 - `docs/ADMIN_DASHBOARD.md`
 
+## Admin CSV report exports
+
+Endpoints:
+
+```text
+GET /api/v1/admin/reports/export/bookings
+GET /api/v1/admin/reports/export/payments
+GET /api/v1/admin/reports/export/drivers
+GET /api/v1/admin/reports/export/withdrawals
+```
+
+Features:
+
+- admin-only Sanctum access
+- optional period and status filters
+- default latest 30 days
+- maximum period 366 days
+- database cursor streaming for bounded memory usage
+- UTF-8 BOM for Excel compatibility
+- timestamped attachment filenames
+- `Cache-Control: no-store`
+- `X-Content-Type-Options: nosniff`
+- spreadsheet formula-injection neutralization
+
+Files:
+
+- `app/Http/Controllers/Api/V1/Admin/ReportExportController.php`
+- `tests/Feature/AdminReportExportFlowTest.php`
+- `docs/CSV_REPORTS.md`
+
 ## Autonomous CI
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-Confirmed green before the latest dashboard changes:
+Confirmed green before CSV export changes:
 
 - OpenAPI lint
 - SQLite feature suite
 - MySQL concurrent-withdrawal suite
 
-The latest dashboard and queue commits trigger a new CI run. Do not claim their tests pass until GitHub reports the result.
+CSV export changes trigger a new CI run. Do not claim `AdminReportExportFlowTest` passes until GitHub reports the result.
 
 ## API documentation
 
 Canonical contract: `docs/openapi.yaml`.
 
-Operational dashboard documentation: `docs/ADMIN_DASHBOARD.md`.
+Operational guides:
+
+- `docs/ADMIN_DASHBOARD.md`
+- `docs/CSV_REPORTS.md`
+- `docs/QUEUE_PRODUCTION.md`
 
 ## Next recommended work
 
-1. Inspect and fix any dashboard/queue CI failure.
-2. Add downloadable CSV reports for bookings, payments, drivers, and withdrawals.
-3. Expand exact OpenAPI schemas and remaining admin endpoints.
-4. Prepare deployment, backup, monitoring, and frontend/Flutter integration.
+1. Inspect and fix any CSV export CI failure.
+2. Expand exact OpenAPI schemas and remaining admin endpoints.
+3. Prepare backup, deployment, monitoring, and frontend/Flutter integration.
 
 ## Response format rule
 
