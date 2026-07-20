@@ -9,51 +9,77 @@ Local path: `C:\Projects\offroad-booking-api`
 
 Estimated progress:
 
-- Core functional MVP: approximately 98–99%
-- Production readiness: approximately 94–95%
+- Core functional MVP: approximately 99%
+- Production readiness: approximately 96%
 
-The complete booking, payment, assignment, allocation, completion reward, withdrawal, audit, notification, rate-limit, queue-hardening, dashboard, and CSV reporting flows are implemented.
+Implemented end-to-end:
 
-## Production queue hardening
+- booking, payment, assignment, allocation, completion reward, withdrawal
+- audit logs, notifications, rate limiting
+- queue hardening and queue health
+- admin dashboard metrics
+- streamed CSV reports
+- application health checks
+- production deployment, backup, and recovery scripts
 
-Implemented:
+## Production health
 
-- Existing Laravel database queue migrations for `jobs`, `job_batches`, and `failed_jobs` confirmed.
-- Operational notifications run on the `notifications` queue after transaction commit.
-- Retry policy: 5 tries.
-- Timeout: 30 seconds with fail-on-timeout.
-- Backoff: 10, 60, 300, and 900 seconds.
-- Queue health config and command.
-- Supervisor template and production operations guide.
-- Queue policy and health tests.
-
-Recommended worker:
+Commands:
 
 ```bash
-php artisan queue:work database --queue=notifications,default --sleep=3 --tries=5 --timeout=30 --max-time=3600
+php artisan app:health
+php artisan app:health --json
+php artisan queue:health
+php artisan queue:health --json
 ```
 
-## Admin dashboard metrics
+`app:health` verifies:
 
-Endpoint:
+- database connectivity
+- writable default storage
+- accessible `jobs` and `failed_jobs` tables
+
+Test: `tests/Feature/ApplicationHealthFlowTest.php`.
+
+## Deployment and backup
+
+Files:
+
+```text
+deploy/scripts/deploy.sh
+deploy/scripts/backup.sh
+deploy/supervisor/offroad-booking-worker.conf
+docs/PRODUCTION_DEPLOYMENT.md
+```
+
+Deployment behavior:
+
+- maintenance mode with automatic recovery trap
+- fetch/reset to configured branch
+- production Composer install
+- forced migrations
+- storage link
+- cache rebuild
+- queue restart
+- application health gate before reopening
+
+Backup behavior:
+
+- compressed transactional MySQL dump
+- compressed `storage/app/public`
+- protected `.env` backup
+- SHA-256 checksums
+- default 14-day retention
+
+## Admin reporting
+
+Dashboard:
 
 ```text
 GET /api/v1/admin/dashboard
 ```
 
-Supports `date_from` and `date_to`, defaults to the latest 30 days, and limits the period to 366 days.
-
-Metrics include bookings, participants, booking value, payments/revenue, driver and vehicle snapshots, withdrawals, and zero-filled daily trends.
-
-Files:
-
-- `app/Http/Controllers/Api/V1/Admin/DashboardController.php`
-- `tests/Feature/AdminDashboardFlowTest.php`
-- `docs/ADMIN_DASHBOARD.md`
-
-## Admin CSV report exports
-
-Endpoints:
+CSV exports:
 
 ```text
 GET /api/v1/admin/reports/export/bookings
@@ -62,36 +88,17 @@ GET /api/v1/admin/reports/export/drivers
 GET /api/v1/admin/reports/export/withdrawals
 ```
 
-Features:
-
-- admin-only Sanctum access
-- optional period and status filters
-- default latest 30 days
-- maximum period 366 days
-- database cursor streaming for bounded memory usage
-- UTF-8 BOM for Excel compatibility
-- timestamped attachment filenames
-- `Cache-Control: no-store`
-- `X-Content-Type-Options: nosniff`
-- spreadsheet formula-injection neutralization
-
-Files:
-
-- `app/Http/Controllers/Api/V1/Admin/ReportExportController.php`
-- `tests/Feature/AdminReportExportFlowTest.php`
-- `docs/CSV_REPORTS.md`
-
 ## Autonomous CI
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-Confirmed green before CSV export changes:
+Previously confirmed green:
 
 - OpenAPI lint
 - SQLite feature suite
 - MySQL concurrent-withdrawal suite
 
-CSV export changes trigger a new CI run. Do not claim `AdminReportExportFlowTest` passes until GitHub reports the result.
+The newest reporting/deployment commits trigger a new run. Do not claim `AdminReportExportFlowTest` or `ApplicationHealthFlowTest` passes until GitHub reports it.
 
 ## API documentation
 
@@ -102,12 +109,16 @@ Operational guides:
 - `docs/ADMIN_DASHBOARD.md`
 - `docs/CSV_REPORTS.md`
 - `docs/QUEUE_PRODUCTION.md`
+- `docs/PRODUCTION_DEPLOYMENT.md`
+
+The canonical OpenAPI still needs expansion for dashboard, CSV responses, exact schemas, and remaining admin CRUD operations.
 
 ## Next recommended work
 
-1. Inspect and fix any CSV export CI failure.
-2. Expand exact OpenAPI schemas and remaining admin endpoints.
-3. Prepare backup, deployment, monitoring, and frontend/Flutter integration.
+1. Inspect and fix current CI failures, if any.
+2. Complete canonical OpenAPI coverage.
+3. Add external monitoring/alert delivery and backup restore verification.
+4. Start Laravel admin/customer frontend and Flutter driver integration.
 
 ## Response format rule
 
