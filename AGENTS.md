@@ -14,13 +14,14 @@
 
 ## Mandatory workflow
 
-1. Inspect current models, enums, migrations, controllers, routes, and tests before changing behavior.
+1. Inspect current models, enums, migrations, controllers, routes, tests, and API documentation before changing behavior.
 2. Apply backend changes directly to `main`, unless the user requests another branch.
 3. Preserve existing enums and relationships unless a migration is required.
 4. Operational vehicles belong to drivers through `vehicles.driver_profile_id`.
 5. Never expose real access tokens or claim tests passed unless executed.
-6. Update this file with every backend/project change.
-7. cURL delivery must be a complete test flow from prerequisite setup and all role logins through the main action, success verification, and important regression failures.
+6. Update this file and `PROJECT_PROGRESS.md` with project changes.
+7. Keep `docs/openapi.yaml` synchronized with endpoint, payload, status-code, authentication, and rate-limit changes.
+8. cURL delivery must be a complete test flow from prerequisite setup and all role logins through the main action, success verification, and important regression failures.
 
 ## Required response structure
 
@@ -53,7 +54,8 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 - Operational notifications are stored in the database and dispatched through Laravel queue after transaction commit.
 - Notification ownership is isolated.
 - Rate limiting is risk-based: login by email+IP, public registration by IP, authenticated reads by user, uploads by user, withdrawals by driver, and admin writes by admin.
-- Backend tests must run autonomously through GitHub Actions on every push or pull request to `main`.
+- Backend tests and OpenAPI lint must run autonomously through GitHub Actions on every push or pull request to `main`.
+- OpenAPI 3.1 at `docs/openapi.yaml` is the canonical API contract.
 
 ## Implemented progress
 
@@ -79,14 +81,21 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
   - `file-upload`: 10/minute per user/IP
   - `withdrawal-request`: 3/hour per user/IP
   - `admin-write`: 60/minute per user/IP
+- OpenAPI 3.1 specification documents public, auth, notification, customer, driver, and core admin operations.
+- Reusable schemas cover Bearer auth, common errors, pagination, uploads, `429` headers, and main request payloads.
+- `docs/README.md` explains Redoc preview, Swagger UI preview, linting, and Postman import.
 
 ### Autonomous CI
 
-- Workflow: `.github/workflows/backend-tests.yml`.
-- Runs on pushes and pull requests targeting `main`, plus manual `workflow_dispatch`.
-- Job `SQLite feature suite` runs the complete default Laravel test suite on PHP 8.3.
-- Job `MySQL concurrency suite` provisions MySQL 8.4 and runs `phpunit.mysql.xml`.
-- Composer dependencies are cached and concurrent runs for the same ref are cancelled.
+Workflow: `.github/workflows/backend-tests.yml`.
+
+Jobs:
+
+- `OpenAPI lint` using `@redocly/cli`.
+- `SQLite feature suite` on PHP 8.3.
+- `MySQL concurrency suite` with MySQL 8.4.
+
+The workflow runs on pushes and pull requests targeting `main`, plus manual `workflow_dispatch`.
 
 ### Critical tests
 
@@ -111,30 +120,34 @@ Use Indonesian, ready-to-run PowerShell, importable full-flow cURL, expected HTT
 
 ## Verification status and limitations
 
-- GitHub Actions now executes runtime tests automatically.
-- The connector did not expose a check result immediately after workflow creation, so the first CI run result is not yet confirmed here.
+- GitHub Actions is the primary autonomous runtime validator.
+- Do not claim a job passes until its workflow result is available.
 - Standard suite uses SQLite memory; row-lock concurrency uses the dedicated MySQL suite.
-- Local fallback:
+- OpenAPI is linted by Redocly on each workflow run.
+
+Local fallback:
 
 ```powershell
 php artisan optimize:clear
 php artisan migrate
 php artisan test
 php artisan test --configuration=phpunit.mysql.xml
+npx --yes @redocly/cli@latest lint docs/openapi.yaml
 ```
 
 ## Latest relevant commits
 
-- `a03fdc0c4c79c3eba83da676a152691d9c109c8a` — add autonomous SQLite and MySQL GitHub Actions jobs.
-- `e20b6c716142e4420a43be4453ebbee3e3fbe7f7` — public rate-limit feature tests.
-- `8b2b92e8cef1f2a5c16ea640ae103eaf0794cb45` — apply rate-limit middleware to routes.
-- `615d775963c0a6ab5c372221af0794c17b4b9747` — configure named API rate limiters.
+- `f96ac069d5815b7f305a62d046574268c2094306` — OpenAPI usage guide.
+- `536a6e05b620824aa14db5e0d89ea13521ef7359` — add OpenAPI lint CI job.
+- `799d9be90d821965d4d8b764531a1f4ded47a857` — add OpenAPI 3.1 contract.
+- `a03fdc0c4c79c3eba83da676a152691d9c109c8a` — autonomous SQLite/MySQL CI.
+- `e20b6c716142e4420a43be4453ebbee3e3fbe7f7` — public rate-limit tests.
 - `89c5df69849a86451eafd675ae50c1bbcded4eb6` — MySQL concurrent withdrawal test.
 
 ## Next progress list
 
-1. Inspect and fix the first GitHub Actions failures, if any.
-2. Add OpenAPI documentation.
+1. Inspect and fix GitHub Actions failures when results are available.
+2. Expand OpenAPI to every remaining admin CRUD/list endpoint and exact response schemas.
 3. Configure production queue worker/supervision.
 4. Add reporting/dashboard metrics.
 5. Prepare backup, deployment, monitoring, and client integration.
