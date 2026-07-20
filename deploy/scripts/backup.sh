@@ -10,20 +10,29 @@ DESTINATION="${BACKUP_DIR}/${TIMESTAMP}"
 cd "$APP_DIR"
 mkdir -p "$DESTINATION"
 
+env_value() {
+  local key="$1"
+  local fallback="${2:-}"
+  local value
+
+  value="$(grep -E "^${key}=" .env | tail -n 1 | cut -d= -f2- || true)"
+  value="${value%\"}"
+  value="${value#\"}"
+
+  printf '%s' "${value:-$fallback}"
+}
+
+DB_HOST_VALUE="${DB_HOST:-$(env_value DB_HOST 127.0.0.1)}"
+DB_PORT_VALUE="${DB_PORT:-$(env_value DB_PORT 3306)}"
+DB_DATABASE_VALUE="${DB_DATABASE:-$(env_value DB_DATABASE)}"
+DB_USERNAME_VALUE="${DB_USERNAME:-$(env_value DB_USERNAME)}"
+DB_PASSWORD_VALUE="${DB_PASSWORD:-$(env_value DB_PASSWORD)}"
+
+: "${DB_DATABASE_VALUE:?DB_DATABASE is required}"
+: "${DB_USERNAME_VALUE:?DB_USERNAME is required}"
+
 php artisan down --retry=60
 trap 'php artisan up >/dev/null 2>&1 || true' EXIT
-
-DB_HOST_VALUE="$(php artisan env --json 2>/dev/null | jq -r '.DB_HOST // empty' || true)"
-DB_PORT_VALUE="$(php artisan env --json 2>/dev/null | jq -r '.DB_PORT // empty' || true)"
-DB_DATABASE_VALUE="$(php artisan env --json 2>/dev/null | jq -r '.DB_DATABASE // empty' || true)"
-DB_USERNAME_VALUE="$(php artisan env --json 2>/dev/null | jq -r '.DB_USERNAME // empty' || true)"
-DB_PASSWORD_VALUE="$(php artisan env --json 2>/dev/null | jq -r '.DB_PASSWORD // empty' || true)"
-
-DB_HOST_VALUE="${DB_HOST_VALUE:-${DB_HOST:-127.0.0.1}}"
-DB_PORT_VALUE="${DB_PORT_VALUE:-${DB_PORT:-3306}}"
-DB_DATABASE_VALUE="${DB_DATABASE_VALUE:-${DB_DATABASE:?DB_DATABASE is required}}"
-DB_USERNAME_VALUE="${DB_USERNAME_VALUE:-${DB_USERNAME:?DB_USERNAME is required}}"
-DB_PASSWORD_VALUE="${DB_PASSWORD_VALUE:-${DB_PASSWORD:-}}"
 
 MYSQL_PWD="$DB_PASSWORD_VALUE" mysqldump \
   --host="$DB_HOST_VALUE" \
