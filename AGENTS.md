@@ -31,17 +31,16 @@
 
 - `BookingLifecycleService` is canonical for booking transitions, cancellation propagation, row locking, completion rewards, and ledger idempotency.
 - `WithdrawalService` is canonical for withdrawal requests and admin transitions.
-- Withdrawal transitions lock both withdrawal and driver profile, retry transactions up to three times, and perform HOLD/RELEASE/DEBIT ledger mutations.
 - API and Admin Web must not duplicate booking or withdrawal balance logic.
 
 ## Admin web
 
-- Session routes: `/admin/login`, `/admin`, `/admin/logout`.
-- Dashboard, payment verification, booking operations, participant allocation, driver/vehicle verification, and withdrawal operations are implemented.
-- Withdrawal routes support list/detail, status/search filters, approve, reject with required reason, and paid processing.
-- Allowed withdrawal transitions: `pending → approved|rejected`, `approved → paid`.
-- Rejection releases held points to available; paid debits held points. Both actions create point-ledger records through `WithdrawalService`.
-- Tests include `AdminWebWithdrawalFlowTest` plus existing admin web suites.
+- Session authentication, dashboard, payment verification, booking operations, participant allocation, driver/vehicle verification, and withdrawal operations are implemented.
+- Reports page: `GET /admin/reports`.
+- Session-protected CSV downloads reuse `Api\V1\Admin\ReportExportController`, preserving cursor streaming, UTF-8 BOM, no-store, nosniff, period validation, and formula-injection neutralization.
+- Audit pages: `GET /admin/audit-logs` and `GET /admin/audit-logs/{auditLog}`.
+- Audit filters cover event, actor name/email, subject type/id, and date range. Detail shows actor/request context plus formatted before/after JSON.
+- Tests include `AdminWebReportsAuditFlowTest` plus existing admin web suites.
 
 ## Production operations
 
@@ -54,13 +53,13 @@
 
 ## Verification status
 
-- CI was confirmed green before the admin withdrawal changes.
-- Do not claim `AdminWebWithdrawalFlowTest` or the WithdrawalService refactor passes until the newest CI run is confirmed.
+- CI was confirmed green before the reports/audit web changes.
+- Do not claim `AdminWebReportsAuditFlowTest` passes until the newest CI run is confirmed.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Inspect and fix any withdrawal CI failure.
-2. Build reports and audit pages.
-3. Finish canonical OpenAPI dashboard/CSV/admin schemas.
-4. Start customer web and Flutter driver integration.
+1. Inspect and fix any reports/audit CI failure.
+2. Finish canonical OpenAPI dashboard/CSV/admin schemas.
+3. Start customer web.
+4. Start Flutter driver integration.
