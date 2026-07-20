@@ -27,22 +27,21 @@
 - Risk-based rate limiting, queued notifications, MySQL concurrency protection, reporting, CSV export, health checks, backup/deploy scripts, and autonomous CI.
 - GitHub Actions jobs: OpenAPI lint, SQLite suite, and MySQL concurrency suite.
 
-## Shared booking lifecycle
+## Shared services
 
-- `App\Services\BookingLifecycleService` is the canonical implementation for booking transitions.
-- Both API and Admin Web must call this service rather than duplicating status/reward logic.
-- It enforces strict transitions, paid-booking requirements, accepted-assignment requirements, cancellation propagation, row locking, completion reward idempotency, and point-ledger creation.
-- Completion retries the database transaction up to three times.
+- `BookingLifecycleService` is canonical for booking transitions, cancellation propagation, row locking, completion rewards, and ledger idempotency.
+- `WithdrawalService` is canonical for withdrawal requests and admin transitions.
+- Withdrawal transitions lock both withdrawal and driver profile, retry transactions up to three times, and perform HOLD/RELEASE/DEBIT ledger mutations.
+- API and Admin Web must not duplicate booking or withdrawal balance logic.
 
 ## Admin web
 
 - Session routes: `/admin/login`, `/admin`, `/admin/logout`.
-- Dashboard, payment verification, booking operations, participant allocation, and driver/vehicle verification are implemented.
-- Driver queue supports status filtering plus name/email/license/identity search.
-- Driver detail shows profile, uploaded documents, vehicles, and prior verification result.
-- Driver approval sets `verification_status=approved` and operational `status=available`; rejection sets `status=unavailable` and requires a reason.
-- Vehicle approval/rejection follows the same activation rule and verifies vehicle ownership under the selected driver profile.
-- Tests include `AdminWebDriverVerificationFlowTest` in addition to existing admin web tests.
+- Dashboard, payment verification, booking operations, participant allocation, driver/vehicle verification, and withdrawal operations are implemented.
+- Withdrawal routes support list/detail, status/search filters, approve, reject with required reason, and paid processing.
+- Allowed withdrawal transitions: `pending → approved|rejected`, `approved → paid`.
+- Rejection releases held points to available; paid debits held points. Both actions create point-ledger records through `WithdrawalService`.
+- Tests include `AdminWebWithdrawalFlowTest` plus existing admin web suites.
 
 ## Production operations
 
@@ -55,14 +54,13 @@
 
 ## Verification status
 
-- CI was confirmed green before the admin driver/vehicle verification changes.
-- Do not claim `AdminWebDriverVerificationFlowTest` passes until the newest CI run is confirmed.
+- CI was confirmed green before the admin withdrawal changes.
+- Do not claim `AdminWebWithdrawalFlowTest` or the WithdrawalService refactor passes until the newest CI run is confirmed.
 - GitHub Actions remains the primary autonomous validator.
 
 ## Next progress list
 
-1. Inspect and fix any driver/vehicle verification CI failure.
-2. Build withdrawal operations pages.
-3. Build reports and audit pages.
-4. Finish canonical OpenAPI dashboard/CSV/admin schemas.
-5. Start customer web and Flutter driver integration.
+1. Inspect and fix any withdrawal CI failure.
+2. Build reports and audit pages.
+3. Finish canonical OpenAPI dashboard/CSV/admin schemas.
+4. Start customer web and Flutter driver integration.
