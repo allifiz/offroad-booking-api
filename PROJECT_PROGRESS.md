@@ -9,10 +9,10 @@ Local path: `C:\Projects\offroad-booking-api`
 
 Estimated progress:
 
-- Core functional MVP: approximately 96–97%
-- Production readiness: approximately 90–92%
+- Core functional MVP: approximately 97–98%
+- Production readiness: approximately 92–94%
 
-The complete booking, payment, assignment, allocation, completion reward, withdrawal, audit, notification, and rate-limit flows are implemented.
+The complete booking, payment, assignment, allocation, completion reward, withdrawal, audit, notification, rate-limit, queue-hardening, and initial admin reporting flows are implemented.
 
 ## Production queue hardening
 
@@ -23,45 +23,76 @@ Implemented:
 - Retry policy: 5 tries.
 - Timeout: 30 seconds with fail-on-timeout.
 - Backoff: 10, 60, 300, and 900 seconds.
-- `.env.example` includes queue connection, retry-after, failed-job driver, and health thresholds.
-- Queue health config: `config/queue_health.php`.
-- Queue health command:
-  - `php artisan queue:health`
-  - `php artisan queue:health --json`
-- Supervisor template: `deploy/supervisor/offroad-booking-worker.conf`.
-- Production operations guide: `docs/QUEUE_PRODUCTION.md`.
-- Queue policy and health tests: `tests/Feature/QueueHealthFlowTest.php`.
+- Queue health config and command.
+- Supervisor template and production operations guide.
+- Queue policy and health tests.
 
-Recommended production worker:
+Recommended worker:
 
 ```bash
 php artisan queue:work database --queue=notifications,default --sleep=3 --tries=5 --timeout=30 --max-time=3600
 ```
 
-`DB_QUEUE_RETRY_AFTER` defaults to 120 seconds and must remain greater than the 30-second worker timeout.
+## Admin dashboard metrics
+
+Endpoint:
+
+```text
+GET /api/v1/admin/dashboard
+```
+
+Query parameters:
+
+- `date_from` optional
+- `date_to` optional
+- default latest 30 days
+- maximum range 366 days
+
+Metrics:
+
+- bookings by status
+- participant count
+- gross booking value excluding cancelled bookings
+- payments by `unpaid`, `pending`, `paid`, `refunded`, and `failed`
+- paid revenue, pending amount, and refunded amount
+- driver total, verification, availability, available points, and held points
+- vehicle total, verification, and availability
+- withdrawals by status, requested points, paid amount, and pending amount
+- zero-filled daily trend for bookings, booking value, and paid revenue
+
+Authorization:
+
+- admin only
+- customer/driver receive `403`
+
+Files:
+
+- `app/Http/Controllers/Api/V1/Admin/DashboardController.php`
+- `tests/Feature/AdminDashboardFlowTest.php`
+- `docs/ADMIN_DASHBOARD.md`
 
 ## Autonomous CI
 
 Workflow: `.github/workflows/backend-tests.yml`.
 
-Previously confirmed green:
+Confirmed green before the latest dashboard changes:
 
 - OpenAPI lint
 - SQLite feature suite
 - MySQL concurrent-withdrawal suite
 
-The queue-hardening commits trigger a new CI run. Do not claim the new queue tests pass until GitHub reports the result.
+The latest dashboard and queue commits trigger a new CI run. Do not claim their tests pass until GitHub reports the result.
 
 ## API documentation
 
 Canonical contract: `docs/openapi.yaml`.
 
-Current coverage includes public, authentication, notifications, customer flow, driver flow, and core admin operations.
+Operational dashboard documentation: `docs/ADMIN_DASHBOARD.md`.
 
 ## Next recommended work
 
-1. Inspect and fix any queue-hardening CI failure.
-2. Add admin reporting/dashboard metrics.
+1. Inspect and fix any dashboard/queue CI failure.
+2. Add downloadable CSV reports for bookings, payments, drivers, and withdrawals.
 3. Expand exact OpenAPI schemas and remaining admin endpoints.
 4. Prepare deployment, backup, monitoring, and frontend/Flutter integration.
 
