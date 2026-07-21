@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\TourPackageStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TourPackage extends Model
 {
@@ -21,6 +22,11 @@ class TourPackage extends Model
         'price_per_person',
         'status',
     ];
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
 
     protected function casts(): array
     {
