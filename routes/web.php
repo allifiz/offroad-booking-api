@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Admin\ReportExportController;
 use App\Http\Controllers\Web\Admin\AuditLogController;
 use App\Http\Controllers\Web\Admin\AuthController;
 use App\Http\Controllers\Web\Admin\BookingController;
+use App\Http\Controllers\Web\Admin\CustomerController;
 use App\Http\Controllers\Web\Admin\DashboardController;
 use App\Http\Controllers\Web\Admin\DriverVerificationController;
 use App\Http\Controllers\Web\Admin\PaymentController;
@@ -24,6 +25,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
     Route::middleware(['auth', 'admin.web'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::patch('/customers/{customer}/status', [CustomerController::class, 'updateStatus'])->name('customers.status');
 
         Route::resource('tour-packages', TourPackageController::class)
             ->except('show');
