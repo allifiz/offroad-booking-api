@@ -1,35 +1,16 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kendaraan · Admin</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
-<main class="mx-auto max-w-7xl p-5 sm:p-8">
+@extends('layouts.admin')
+
+@section('title', 'Kendaraan')
+
+@section('content')
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <a href="{{ route('admin.dashboard') }}" class="text-sm font-bold text-amber-700">← Dashboard</a>
-            <p class="mt-4 text-xs font-bold uppercase tracking-[.2em] text-amber-600">Operasional armada</p>
+            <p class="text-xs font-bold uppercase tracking-[.2em] text-amber-600">Operasional armada</p>
             <h1 class="mt-2 text-3xl font-black">Kendaraan</h1>
             <p class="mt-2 text-slate-600">Kelola kendaraan perusahaan dan kendaraan milik driver.</p>
         </div>
         <a href="{{ route('admin.vehicles.create') }}" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Tambah kendaraan</a>
     </div>
-
-    @if (session('success'))
-        <div class="mt-5 rounded-xl bg-emerald-50 p-4 text-emerald-800">{{ session('success') }}</div>
-    @endif
-    @if ($errors->any())
-        <div class="mt-5 rounded-xl bg-red-50 p-4 text-red-800">
-            <ul class="list-disc pl-5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
 
     <form method="GET" class="mt-6 grid gap-3 rounded-2xl border bg-white p-4 shadow-sm lg:grid-cols-[1fr_210px_210px_auto]">
         <input name="search" value="{{ request('search') }}" placeholder="Nama, plat, brand, model, driver" class="rounded-xl border-slate-300">
@@ -85,6 +66,4 @@
         </div>
         <div class="border-t px-5 py-4">{{ $vehicles->links() }}</div>
     </div>
-</main>
-</body>
-</html>
+@endsection
