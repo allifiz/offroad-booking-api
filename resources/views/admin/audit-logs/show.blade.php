@@ -1,1 +1,40 @@
-<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audit #{{ $auditLog->id }} · Admin</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body class="min-h-screen bg-slate-100 text-slate-900"><main class="mx-auto max-w-6xl p-5 sm:p-8"><a href="{{ route('admin.audit-logs.index') }}" class="text-sm font-bold text-amber-700">← Audit Logs</a><header class="mt-5 rounded-2xl bg-slate-950 p-6 text-white"><p class="text-xs font-bold uppercase tracking-[.2em] text-amber-400">Audit detail</p><h1 class="mt-2 text-3xl font-black">{{ $auditLog->event }} {{ class_basename($auditLog->subject_type) }} #{{ $auditLog->subject_id }}</h1><p class="mt-2 text-slate-400">{{ $auditLog->created_at->format('d M Y H:i:s') }}</p></header><section class="mt-6 grid gap-6 lg:grid-cols-2"><article class="rounded-2xl border bg-white p-6 shadow-sm"><h2 class="font-black">Request context</h2><dl class="mt-4 space-y-3 text-sm"><div><dt class="text-slate-500">Actor</dt><dd class="font-semibold">{{ $auditLog->actor?->name ?? 'System' }} · {{ $auditLog->actor?->email }}</dd></div><div><dt class="text-slate-500">Method / URL</dt><dd class="break-all font-semibold">{{ $auditLog->request_method }} {{ $auditLog->url }}</dd></div><div><dt class="text-slate-500">IP address</dt><dd class="font-semibold">{{ $auditLog->ip_address ?? '-' }}</dd></div><div><dt class="text-slate-500">User agent</dt><dd class="break-words font-semibold">{{ $auditLog->user_agent ?? '-' }}</dd></div></dl></article><article class="rounded-2xl border bg-white p-6 shadow-sm"><h2 class="font-black">Subject</h2><dl class="mt-4 space-y-3 text-sm"><div><dt class="text-slate-500">Type</dt><dd class="break-all font-semibold">{{ $auditLog->subject_type }}</dd></div><div><dt class="text-slate-500">ID</dt><dd class="font-semibold">{{ $auditLog->subject_id }}</dd></div><div><dt class="text-slate-500">Event</dt><dd class="font-semibold">{{ $auditLog->event }}</dd></div></dl></article></section><section class="mt-6 grid gap-6 lg:grid-cols-2"><article class="rounded-2xl border bg-white p-6 shadow-sm"><h2 class="font-black text-red-700">Before</h2><pre class="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ json_encode($auditLog->old_values ?? [], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) }}</pre></article><article class="rounded-2xl border bg-white p-6 shadow-sm"><h2 class="font-black text-emerald-700">After</h2><pre class="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ json_encode($auditLog->new_values ?? [], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) }}</pre></article></section></main></body></html>
+@extends('layouts.admin')
+
+@section('title', 'Audit #'.$auditLog->id)
+
+@section('content')
+<div class="mx-auto max-w-6xl">
+    <a href="{{ route('admin.audit-logs.index') }}" class="text-sm font-bold text-amber-700">← Audit Logs</a>
+
+    <header class="mt-5 rounded-2xl bg-slate-950 p-6 text-white">
+        <p class="text-xs font-bold uppercase tracking-[.2em] text-amber-400">Audit detail</p>
+        <h1 class="mt-2 text-3xl font-black">{{ $auditLog->event }} {{ class_basename($auditLog->subject_type) }} #{{ $auditLog->subject_id }}</h1>
+        <p class="mt-2 text-slate-400">{{ $auditLog->created_at->format('d M Y H:i:s') }}</p>
+    </header>
+
+    <section class="mt-6 grid gap-6 lg:grid-cols-2">
+        <article class="rounded-2xl border bg-white p-6 shadow-sm">
+            <h2 class="font-black">Request context</h2>
+            <dl class="mt-4 space-y-3 text-sm">
+                <div><dt class="text-slate-500">Actor</dt><dd class="font-semibold">{{ $auditLog->actor?->name ?? 'System' }} · {{ $auditLog->actor?->email }}</dd></div>
+                <div><dt class="text-slate-500">Method / URL</dt><dd class="break-all font-semibold">{{ $auditLog->request_method }} {{ $auditLog->url }}</dd></div>
+                <div><dt class="text-slate-500">IP address</dt><dd class="font-semibold">{{ $auditLog->ip_address ?? '-' }}</dd></div>
+                <div><dt class="text-slate-500">User agent</dt><dd class="break-words font-semibold">{{ $auditLog->user_agent ?? '-' }}</dd></div>
+            </dl>
+        </article>
+        <article class="rounded-2xl border bg-white p-6 shadow-sm">
+            <h2 class="font-black">Subject</h2>
+            <dl class="mt-4 space-y-3 text-sm">
+                <div><dt class="text-slate-500">Type</dt><dd class="break-all font-semibold">{{ $auditLog->subject_type }}</dd></div>
+                <div><dt class="text-slate-500">ID</dt><dd class="font-semibold">{{ $auditLog->subject_id }}</dd></div>
+                <div><dt class="text-slate-500">Event</dt><dd class="font-semibold">{{ $auditLog->event }}</dd></div>
+            </dl>
+        </article>
+    </section>
+
+    <section class="mt-6 grid gap-6 lg:grid-cols-2">
+        <article class="rounded-2xl border bg-white p-6 shadow-sm"><h2 class="font-black text-red-700">Before</h2><pre class="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ json_encode($auditLog->old_values ?? [], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) }}</pre></article>
+        <article class="rounded-2xl border bg-white p-6 shadow-sm"><h2 class="font-black text-emerald-700">After</h2><pre class="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ json_encode($auditLog->new_values ?? [], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) }}</pre></article>
+    </section>
+</div>
+@endsection
