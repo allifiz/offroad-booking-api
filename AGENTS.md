@@ -18,6 +18,8 @@
 
 The Laravel REST API, operational Admin Web, automated tests, OpenAPI contract, reports, audit logs, health checks, deployment assets, and core production operations have been implemented. GitHub Actions has been confirmed green for the completed backend codebase.
 
+The documented Postman end-to-end happy path has also been executed manually against the current backend and a real local MySQL/MariaDB database. All documented requests completed successfully and the persisted records remained connected through customer, booking, payment, driver, assignment, completion reward, and withdrawal flows. See `docs/POSTMAN_E2E_VERIFICATION.md`.
+
 The next product-development phase is Flutter application development and staging/production infrastructure integration. Do not reopen completed backend scope unless a mobile integration issue, verified defect, security requirement, or approved product change requires it.
 
 ## Mandatory workflow
@@ -28,7 +30,8 @@ The next product-development phase is Flutter application development and stagin
 4. Update this file, `README.md`, and `PROJECT_PROGRESS.md` when project status or architecture materially changes.
 5. Keep `docs/openapi.yaml` synchronized with every API endpoint, payload, enum, authentication, pagination, and error-contract change.
 6. Preserve backward compatibility for Flutter clients unless a versioned breaking change is explicitly approved.
-7. After backend changes, respond in this order: Changes, Endpoint changes, Cara pull changes, cURL Postman, Expected result cURL.
+7. Read `docs/POINT_REWARD_DECISION_PENDING.md` before changing assignment, completion reward, point ledger, conversion, or withdrawal behavior.
+8. After backend changes, respond in this order: Changes, Endpoint changes, Cara pull changes, cURL Postman, Expected result cURL.
 
 ## Completed backend scope
 
@@ -39,28 +42,22 @@ The next product-development phase is Flutter application development and stagin
 - Risk-based rate limiting, queued notifications, concurrency-safe booking and withdrawal operations, idempotent rewards, audit trails, CSV export, health checks, backup/deploy scripts, and automated CI.
 - GitHub Actions jobs for OpenAPI lint, SQLite feature tests, and MySQL concurrency tests.
 
-## Pending product decision: driver point rewards
+## Manual acceptance verification
 
-**Read `docs/POINT_REWARD_DECISION_PENDING.md` before changing assignments, booking completion rewards, point balances, conversion rates, or withdrawals.**
+- Test definition: `docs/POSTMAN_END_TO_END_TEST.md`.
+- Verification record: `docs/POSTMAN_E2E_VERIFICATION.md`.
+- Result: complete documented happy path passed manually against the current backend and a real local database.
+- Verified continuity: customer -> booking -> payment -> driver assignment -> completed trip -> point ledger -> withdrawal.
+- This manual result supplements, but does not replace, automated CI, concurrency tests, negative tests, staging tests, or production tests.
+- Point mechanics technically passed according to the current implementation, but the product policy remains pending and must not be described as final.
 
-The current reward implementation is an MVP placeholder, not a finalized product policy:
+## Point policy status
 
-```text
-Completed trip reward   = 100 points
-Rupiah per point        = Rp1.000
-Minimum withdrawal      = 100 points
-```
-
-These defaults come from `config/offroad.php`, but the model remains effectively hardcoded because every completed trip uses one fixed reward and assignment responses do not expose any reward estimate before the driver accepts.
-
-Agent rules:
-
-- Do not treat the current values or formula as final.
-- Do not hardcode the same values in Flutter.
-- Do not add promised or estimated assignment rewards without an explicit product decision.
-- Preserve current behavior until the project owner approves the formula, timing, visibility, guarantee level, conversion rate, withdrawal threshold, and reversal rules.
-- A future reward-policy change may affect assignment, booking lifecycle, point summary/ledger, withdrawal, dashboard, report, and audit endpoints. The complete impact list and rationale are documented in `docs/POINT_REWARD_DECISION_PENDING.md`.
-- Any approved change must update `docs/openapi.yaml`, Postman E2E documentation, feature tests, concurrency tests, and historical snapshot/migration behavior where applicable.
+- Current values are temporary MVP placeholders, not an approved final business policy.
+- Current defaults include 100 points per completed trip, Rp1,000 per point, and a 100-point minimum withdrawal.
+- Reward is currently credited only when a booking becomes `completed` and is not exposed as an estimated reward before assignment acceptance.
+- Preserve current behavior until an explicit product decision is approved.
+- Canonical pending-decision note: `docs/POINT_REWARD_DECISION_PENDING.md`.
 
 ## Shared domain services
 
@@ -86,7 +83,7 @@ Agent rules:
 - Handle revoked tokens, suspended/inactive users, validation errors, pagination, enum values, upload limits, offline failures, retries, and idempotent actions explicitly.
 - Prefer additive backend changes. Breaking response changes require API versioning or an agreed migration plan.
 - Keep customer and driver roles separated at navigation and authorization layers while sharing reusable networking, auth, error, and storage infrastructure.
-- Do not show a promised assignment reward until the backend exposes an approved reward contract. Current point constants must not be duplicated in Flutter.
+- Do not hardcode the current reward values in Flutter because the point policy is still pending.
 
 ## CI requirements
 
@@ -112,6 +109,9 @@ Agent rules:
 - Admin Web functional scope: **completed**.
 - Shared Admin Web layout: **completed**.
 - Automated backend CI: **green**.
-- Driver point reward policy: **pending product decision; current behavior is an MVP placeholder**.
+- Manual Postman E2E happy path: **passed**.
+- Database relationship continuity: **verified**.
+- Point implementation: **technically passed**.
+- Point product policy: **pending decision**.
 - Next active phase: **Flutter customer and driver applications**.
 - Separate operational track: staging, production hardening, monitoring, backup verification, and deployment.
