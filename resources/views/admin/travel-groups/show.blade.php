@@ -1,7 +1,101 @@
-<!DOCTYPE html>
-<html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ $travelGroup->name }} · Admin</title>@vite(['resources/css/app.css','resources/js/app.js'])</head>
-<body class="min-h-screen bg-slate-100 text-slate-900"><main class="mx-auto max-w-6xl p-5 sm:p-8"><a href="{{ route('admin.travel-groups.index') }}" class="text-sm font-bold text-amber-700">← Travel groups</a>
-@if(session('success'))<div class="mt-5 rounded-xl bg-emerald-50 p-4 text-emerald-800">{{ session('success') }}</div>@endif
-@if($errors->any())<div class="mt-5 rounded-xl bg-red-50 p-4 text-red-800"><ul class="list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-<header class="mt-5 flex flex-col gap-4 rounded-2xl bg-slate-950 p-6 text-white sm:flex-row sm:items-end sm:justify-between"><div><p class="text-xs font-bold uppercase tracking-[.2em] text-amber-400">Travel group</p><h1 class="mt-2 text-3xl font-black">{{ $travelGroup->name }}</h1><p class="mt-2 text-slate-400">{{ $travelGroup->source->value }} · leader {{ $travelGroup->leader?->name ?: 'belum ada' }}</p></div><form method="POST" action="{{ route('admin.travel-groups.status',$travelGroup) }}" class="flex gap-2">@csrf @method('PATCH')<select name="status" class="rounded-xl border-0 text-slate-900">@foreach($statuses as $status)<option value="{{ $status->value }}" @selected($travelGroup->status===$status)>{{ ucfirst($status->value) }}</option>@endforeach</select><button class="rounded-xl bg-amber-500 px-4 py-2 font-bold text-slate-950">Simpan</button></form></header>
-<section class="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]"><div class="space-y-6"><article class="rounded-2xl border bg-white p-6 shadow-sm"><div class="flex items-center justify-between"><h2 class="font-bold">Booking group</h2><span class="text-sm text-slate-500">{{ $travelGroup->bookings->count() }} booking</span></div><div class="mt-4 space-y-3">@forelse($travelGroup->bookings as $booking)<a href="{{ route('admin.bookings.show',$booking) }}" class="block rounded-xl border p-4 hover:bg-slate-50"><div class="flex justify-between gap-4"><div><p class="font-bold">{{ $booking->booking_code }}</p><p class="text-sm text-slate-500">{{ $booking->customer?->name }} · {{ $booking->tourPackage?->name }}</p></div><div class="text-right"><p class="font-semibold">{{ $booking->participant_count }} peserta</p><p class="text-xs text-slate-500">{{ $booking->status->value }}</p></div></div></a>@empty<p class="text-sm text-slate-500">Belum ada booking.</p>@endforelse</div></article><article class="rounded-2xl border bg-white p-6 shadow-sm"><div class="flex items-center justify-between"><h2 class="font-bold">Anggota</h2><span class="text-sm text-slate-500">{{ $travelGroup->members->count() }} / {{ $travelGroup->member_limit ?: '∞' }}</span></div><div class="mt-4 divide-y">@forelse($travelGroup->members as $member)<div class="flex justify-between py-3"><div><p class="font-semibold">{{ $member->user?->name }}</p><p class="text-xs text-slate-500">{{ $member->user?->email }}</p></div>@if($member->is_leader)<span class="text-xs font-bold text-amber-700">Leader</span>@endif</div>@empty<p class="text-sm text-slate-500">Belum ada anggota.</p>@endforelse</div></article></div><aside class="space-y-6"><article class="rounded-2xl border bg-white p-5 shadow-sm"><h2 class="font-bold">Tambahkan booking</h2><form method="POST" action="{{ route('admin.travel-groups.bookings.store',$travelGroup) }}" class="mt-4 space-y-3">@csrf<select name="booking_id" required class="w-full rounded-xl border-slate-300"><option value="">Pilih booking</option>@foreach($candidateBookings as $booking)<option value="{{ $booking->id }}">{{ $booking->booking_code }} · {{ $booking->customer?->name }} · {{ $booking->participant_count }} peserta</option>@endforeach</select><button class="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white">Masukkan booking</button></form></article><article class="rounded-2xl border bg-white p-5 shadow-sm"><h2 class="font-bold">Informasi</h2><dl class="mt-4 space-y-3 text-sm"><div><dt class="text-slate-500">Dibuat oleh</dt><dd class="font-semibold">{{ $travelGroup->creator?->name }}</dd></div><div><dt class="text-slate-500">Batas anggota</dt><dd class="font-semibold">{{ $travelGroup->member_limit ?: 'Tanpa batas' }}</dd></div><div><dt class="text-slate-500">Catatan</dt><dd class="whitespace-pre-line">{{ $travelGroup->notes ?: '-' }}</dd></div></dl></article></aside></section></main></body></html>
+@extends('layouts.admin')
+
+@section('title', $travelGroup->name)
+
+@section('content')
+    <a href="{{ route('admin.travel-groups.index') }}" class="text-sm font-bold text-amber-700">← Travel groups</a>
+
+    <header class="mt-5 flex flex-col gap-4 rounded-2xl bg-slate-950 p-6 text-white sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <p class="text-xs font-bold uppercase tracking-[.2em] text-amber-400">Travel group</p>
+            <h1 class="mt-2 text-3xl font-black">{{ $travelGroup->name }}</h1>
+            <p class="mt-2 text-slate-400">{{ $travelGroup->source->value }} · leader {{ $travelGroup->leader?->name ?: 'belum ada' }}</p>
+        </div>
+        <form method="POST" action="{{ route('admin.travel-groups.status', $travelGroup) }}" class="flex gap-2">
+            @csrf
+            @method('PATCH')
+            <select name="status" class="rounded-xl border-0 text-slate-900">
+                @foreach ($statuses as $status)
+                    <option value="{{ $status->value }}" @selected($travelGroup->status === $status)>{{ ucfirst($status->value) }}</option>
+                @endforeach
+            </select>
+            <button class="rounded-xl bg-amber-500 px-4 py-2 font-bold text-slate-950">Simpan</button>
+        </form>
+    </header>
+
+    <section class="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div class="space-y-6">
+            <article class="rounded-2xl border bg-white p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-bold">Booking group</h2>
+                    <span class="text-sm text-slate-500">{{ $travelGroup->bookings->count() }} booking</span>
+                </div>
+                <div class="mt-4 space-y-3">
+                    @forelse ($travelGroup->bookings as $booking)
+                        <a href="{{ route('admin.bookings.show', $booking) }}" class="block rounded-xl border p-4 hover:bg-slate-50">
+                            <div class="flex justify-between gap-4">
+                                <div>
+                                    <p class="font-bold">{{ $booking->booking_code }}</p>
+                                    <p class="text-sm text-slate-500">{{ $booking->customer?->name }} · {{ $booking->tourPackage?->name }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold">{{ $booking->participant_count }} peserta</p>
+                                    <p class="text-xs text-slate-500">{{ $booking->status->value }}</p>
+                                </div>
+                            </div>
+                        </a>
+                    @empty
+                        <p class="text-sm text-slate-500">Belum ada booking.</p>
+                    @endforelse
+                </div>
+            </article>
+
+            <article class="rounded-2xl border bg-white p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-bold">Anggota</h2>
+                    <span class="text-sm text-slate-500">{{ $travelGroup->members->count() }} / {{ $travelGroup->member_limit ?: '∞' }}</span>
+                </div>
+                <div class="mt-4 divide-y">
+                    @forelse ($travelGroup->members as $member)
+                        <div class="flex justify-between py-3">
+                            <div>
+                                <p class="font-semibold">{{ $member->user?->name }}</p>
+                                <p class="text-xs text-slate-500">{{ $member->user?->email }}</p>
+                            </div>
+                            @if ($member->is_leader)
+                                <span class="text-xs font-bold text-amber-700">Leader</span>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">Belum ada anggota.</p>
+                    @endforelse
+                </div>
+            </article>
+        </div>
+
+        <aside class="space-y-6">
+            <article class="rounded-2xl border bg-white p-5 shadow-sm">
+                <h2 class="font-bold">Tambahkan booking</h2>
+                <form method="POST" action="{{ route('admin.travel-groups.bookings.store', $travelGroup) }}" class="mt-4 space-y-3">
+                    @csrf
+                    <select name="booking_id" required class="w-full rounded-xl border-slate-300">
+                        <option value="">Pilih booking</option>
+                        @foreach ($candidateBookings as $booking)
+                            <option value="{{ $booking->id }}">{{ $booking->booking_code }} · {{ $booking->customer?->name }} · {{ $booking->participant_count }} peserta</option>
+                        @endforeach
+                    </select>
+                    <button class="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white">Masukkan booking</button>
+                </form>
+            </article>
+
+            <article class="rounded-2xl border bg-white p-5 shadow-sm">
+                <h2 class="font-bold">Informasi</h2>
+                <dl class="mt-4 space-y-3 text-sm">
+                    <div><dt class="text-slate-500">Dibuat oleh</dt><dd class="font-semibold">{{ $travelGroup->creator?->name }}</dd></div>
+                    <div><dt class="text-slate-500">Batas anggota</dt><dd class="font-semibold">{{ $travelGroup->member_limit ?: 'Tanpa batas' }}</dd></div>
+                    <div><dt class="text-slate-500">Catatan</dt><dd class="whitespace-pre-line">{{ $travelGroup->notes ?: '-' }}</dd></div>
+                </dl>
+            </article>
+        </aside>
+    </section>
+@endsection
