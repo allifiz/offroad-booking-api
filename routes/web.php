@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\Admin\DriverVerificationController;
 use App\Http\Controllers\Web\Admin\PaymentController;
 use App\Http\Controllers\Web\Admin\ReportController;
 use App\Http\Controllers\Web\Admin\TourPackageController;
+use App\Http\Controllers\Web\Admin\TravelGroupController;
 use App\Http\Controllers\Web\Admin\VehicleController;
 use App\Http\Controllers\Web\Admin\WithdrawalController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,13 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         Route::resource('vehicles', VehicleController::class)
             ->except('show');
+
+        Route::get('/travel-groups', [TravelGroupController::class, 'index'])->name('travel-groups.index');
+        Route::get('/travel-groups/create', [TravelGroupController::class, 'create'])->name('travel-groups.create');
+        Route::post('/travel-groups', [TravelGroupController::class, 'store'])->name('travel-groups.store');
+        Route::get('/travel-groups/{travelGroup}', [TravelGroupController::class, 'show'])->name('travel-groups.show');
+        Route::patch('/travel-groups/{travelGroup}/status', [TravelGroupController::class, 'updateStatus'])->name('travel-groups.status');
+        Route::post('/travel-groups/{travelGroup}/bookings', [TravelGroupController::class, 'attachBooking'])->name('travel-groups.bookings.store');
 
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
