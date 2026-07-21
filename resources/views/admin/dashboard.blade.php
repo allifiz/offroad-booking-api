@@ -15,6 +15,7 @@
         </div>
         <nav class="mt-8 grid grid-cols-2 gap-2 text-sm lg:grid-cols-1">
             <a href="{{ route('admin.dashboard') }}" class="rounded-xl bg-amber-500 px-4 py-3 font-bold text-slate-950">Dashboard</a>
+            <a href="{{ route('admin.customers.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Customers</a>
             <a href="{{ route('admin.tour-packages.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Paket Wisata</a>
             <a href="{{ route('admin.travel-groups.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Travel Groups</a>
             <a href="{{ route('admin.bookings.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Bookings</a>
