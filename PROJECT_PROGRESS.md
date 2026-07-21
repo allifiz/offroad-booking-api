@@ -1,6 +1,6 @@
 # Offroad Booking — Project Progress Checkpoint
 
-Last updated: 2026-07-20 (Asia/Jakarta)
+Last updated: 2026-07-21 (Asia/Jakarta)
 Branch: `main`
 Repository: `allifiz/offroad-booking-api`
 Local path: `C:\Projects\offroad-booking-api`
@@ -10,6 +10,20 @@ Local path: `C:\Projects\offroad-booking-api`
 - Backend core MVP: approximately 99%.
 - Backend production readiness: approximately 97%.
 - Laravel admin web: core operational modules implemented, including reports and audit logs.
+
+## CI verification in progress
+
+A draft pull request from `agent/verify-backend-ci` is being used to trigger and verify the complete `Backend Tests` workflow without writing directly to `main`.
+
+Required jobs:
+
+```text
+OpenAPI lint
+SQLite feature suite
+MySQL concurrency suite
+```
+
+Do not mark the backend CI green until all three jobs complete successfully on the current codebase.
 
 ## Latest SQLite run
 
