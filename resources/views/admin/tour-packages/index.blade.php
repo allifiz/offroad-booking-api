@@ -1,31 +1,16 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Paket Wisata · Admin</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
-<main class="mx-auto max-w-7xl p-5 sm:p-8">
+@extends('layouts.admin')
+
+@section('title', 'Paket Wisata')
+
+@section('content')
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <a href="{{ route('admin.dashboard') }}" class="text-sm font-bold text-amber-700">← Dashboard</a>
-            <p class="mt-4 text-xs font-bold uppercase tracking-[.2em] text-amber-600">Master data</p>
+            <p class="text-xs font-bold uppercase tracking-[.2em] text-amber-600">Master data</p>
             <h1 class="mt-2 text-3xl font-black">Paket Wisata</h1>
             <p class="mt-2 text-slate-600">Kelola paket yang tampil dan dapat dipesan customer.</p>
         </div>
         <a href="{{ route('admin.tour-packages.create') }}" class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Tambah paket</a>
     </div>
-
-    @if(session('success'))
-        <div class="mt-5 rounded-xl bg-emerald-50 p-4 text-emerald-800">{{ session('success') }}</div>
-    @endif
-    @if($errors->any())
-        <div class="mt-5 rounded-xl bg-red-50 p-4 text-red-800">
-            <ul class="list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-        </div>
-    @endif
 
     <form method="GET" class="mt-6 grid gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:grid-cols-[1fr_220px_auto]">
         <input name="search" value="{{ request('search') }}" placeholder="Nama, slug, meeting point" class="rounded-xl border-slate-300">
@@ -48,7 +33,7 @@
                 @forelse($tourPackages as $tourPackage)
                     <tr>
                         <td class="px-5 py-4"><p class="font-bold">{{ $tourPackage->name }}</p><p class="text-xs text-slate-500">{{ $tourPackage->slug }} · {{ $tourPackage->meeting_point ?: 'Meeting point belum diisi' }}</p></td>
-                        <td class="px-5 py-4 font-semibold">Rp{{ number_format($tourPackage->price_per_person, 0, ',', '.') }}</td>
+                        <td class="px-5 py-4 font-semibold">Rp{{ number_format((float) $tourPackage->price_per_person, 0, ',', '.') }}</td>
                         <td class="px-5 py-4">{{ $tourPackage->minimum_participants }}–{{ $tourPackage->maximum_participants ?: '∞' }}</td>
                         <td class="px-5 py-4">{{ $tourPackage->bookings_count }}</td>
                         <td class="px-5 py-4"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{{ $tourPackage->status->value }}</span></td>
@@ -62,6 +47,4 @@
         </div>
         <div class="border-t px-5 py-4">{{ $tourPackages->links() }}</div>
     </div>
-</main>
-</body>
-</html>
+@endsection
