@@ -1,21 +1,101 @@
 # Offroad Booking — Project Progress Checkpoint
 
-Last updated: 2026-07-21 (Asia/Jakarta)
-Branch: `main`
-Repository: `allifiz/offroad-booking-api`
+Last updated: 2026-07-21 (Asia/Jakarta)  
+Branch: `main`  
+Repository: `allifiz/offroad-booking-api`  
 Local path: `C:\Projects\offroad-booking-api`
 
-## Current status
+## Final backend status
 
-- Backend core MVP: approximately 99%.
-- Backend production readiness: approximately 97%.
-- Laravel admin web: core operational modules implemented, including reports and audit logs.
+**BACKEND MVP: COMPLETED ✅**
 
-## CI verification in progress
+| Area | Status |
+|---|---|
+| Backend core MVP | 100% complete |
+| REST API customer | Complete |
+| REST API driver | Complete |
+| Admin Web functional scope | Complete |
+| Shared Admin Web layout | Complete |
+| Reports and audit logs | Complete |
+| Automated feature tests | Complete |
+| MySQL concurrency coverage | Complete |
+| OpenAPI lint | Green |
+| GitHub Actions backend workflow | Green |
+| Flutter integration readiness | Ready to start |
 
-A draft pull request from `agent/verify-backend-ci` is being used to trigger and verify the complete `Backend Tests` workflow without writing directly to `main`.
+The backend feature-development phase is closed. Further backend work should be limited to verified defects, Flutter integration requirements, security hardening, infrastructure integration, or explicitly approved product changes.
 
-Required jobs:
+## Completed customer scope
+
+- Registration, login, logout, token authentication, and profile management.
+- Tour package discovery and detail.
+- Booking creation, participant data, status lifecycle, and cancellation behavior.
+- Payment submission and proof upload.
+- Booking and payment history.
+- Travel group support.
+- Notifications and account-status enforcement.
+
+## Completed driver scope
+
+- Driver onboarding and profile management.
+- Document submission and admin verification.
+- Driver-owned and company vehicle support.
+- Assignment offers and assignment lifecycle.
+- Participant-to-vehicle allocation.
+- Trip completion and idempotent driver rewards.
+- Point ledger, balance protection, and withdrawal lifecycle.
+- Concurrency-safe balance and booking operations.
+
+## Completed Admin Web scope
+
+- Dashboard with operational metrics, recent bookings, and queue shortcuts.
+- Customer management and account suspension/token revocation.
+- Tour package CRUD.
+- Travel group management.
+- Booking status, driver assignment, cancellation, and participant allocation.
+- Payment verification and rejection handling.
+- Driver and vehicle verification.
+- Vehicle CRUD.
+- Withdrawal approval, rejection, and paid transitions.
+- CSV reports for bookings, payments, drivers, and withdrawals.
+- Filterable audit log index and before/after detail.
+- Shared responsive layout, desktop sidebar, mobile menu, active navigation, global success messages, and validation errors.
+
+## Canonical domain services
+
+- `BookingLifecycleService` owns booking transitions, cancellation propagation, row locking, completion rewards, and reward-ledger idempotency.
+- `WithdrawalService` owns withdrawal requests and admin status transitions.
+- API and Admin Web use shared business logic rather than duplicating lifecycle or balance rules.
+
+## API contract
+
+Canonical contract:
+
+```text
+docs/openapi.yaml
+```
+
+The contract is the source of truth for Flutter networking and must remain synchronized with:
+
+- endpoint paths and methods;
+- authentication requirements;
+- request and response schemas;
+- enum values;
+- validation errors;
+- pagination metadata;
+- upload requirements and limits.
+
+Web-only Admin routes are intentionally outside the mobile OpenAPI contract.
+
+## CI verification
+
+Workflow:
+
+```text
+.github/workflows/backend-tests.yml
+```
+
+Confirmed green jobs:
 
 ```text
 OpenAPI lint
@@ -23,104 +103,19 @@ SQLite feature suite
 MySQL concurrency suite
 ```
 
-Do not mark the backend CI green until all three jobs complete successfully on the current codebase.
+Frontend build requirement for Blade feature tests:
 
-## Latest SQLite run
-
-After the Vite manifest fix, most feature tests passed. Three web regressions remained:
-
-```text
-AdminWebBookingFlowTest
-AdminWebFlowTest
-ExampleTest
+```bash
+npm install --ignore-scripts
+npm run build
+php artisan test
 ```
 
-### Guest redirect fix
+The repository currently has no `package-lock.json`, so CI must continue using `npm install` rather than `npm ci` until a lockfile is committed.
 
-Laravel authentication middleware previously expected a global route named `login`, while the project only defines `admin.login`.
+## Production operations available
 
-`bootstrap/app.php` now explicitly configures:
-
-```php
-$middleware->redirectGuestsTo(fn (Request $request): string => route('admin.login'));
-```
-
-Commit:
-
-```text
-f09bc7ce24a784569792e298c51e9917c70b6a58
-```
-
-### Root route test fix
-
-The root route intentionally redirects:
-
-```text
-/ → /admin
-```
-
-The old skeleton `ExampleTest` expected HTTP 200. It now asserts the intended redirect.
-
-Commit:
-
-```text
-0780d82c251d88bcd568306c77062692103d22c3
-```
-
-### Booking list render hardening
-
-The booking list now parses `tour_date` through Carbon and casts `total_amount` to float before formatting. This avoids a view-level 500 when SQLite hydration returns values in a different runtime shape.
-
-Commit:
-
-```text
-388d7016e8e087fcf728e80a19c4c04d66c9786e
-```
-
-## CI frontend requirements
-
-SQLite feature tests render Blade pages using Laravel `@vite`, so the workflow must generate:
-
-```text
-public/build/manifest.json
-```
-
-The job now runs:
-
-```text
-setup Node.js 22
-→ npm install --ignore-scripts
-→ npm run build
-→ php artisan test
-```
-
-Workflow commit:
-
-```text
-ab13bbf80e1cea108c0fe837a15d9f81c77cd6ae
-```
-
-The repository currently has no `package-lock.json`, therefore CI uses `npm install` instead of `npm ci`.
-
-## Admin reports and audit logs
-
-Implemented routes:
-
-```text
-GET /admin/reports
-GET /admin/reports/export/bookings
-GET /admin/reports/export/payments
-GET /admin/reports/export/drivers
-GET /admin/reports/export/withdrawals
-GET /admin/audit-logs
-GET /admin/audit-logs/{auditLog}
-```
-
-Reports reuse the canonical CSV export controller with cursor streaming, UTF-8 BOM, no-store, nosniff, period validation, and formula-injection neutralization.
-
-Audit logs support event, actor, subject, and date filtering plus formatted before/after detail.
-
-## Existing production operations
+Health commands:
 
 ```bash
 php artisan app:health
@@ -129,45 +124,71 @@ php artisan queue:health
 php artisan queue:health --json
 ```
 
-Deployment and backup:
+Deployment assets:
 
 ```text
 deploy/scripts/deploy.sh
 deploy/scripts/backup.sh
 deploy/supervisor/offroad-booking-worker.conf
+docs/QUEUE_PRODUCTION.md
 docs/PRODUCTION_DEPLOYMENT.md
 ```
 
-## Autonomous CI
+## Remaining operational track
 
-Workflow: `.github/workflows/backend-tests.yml`.
+These items do not block Flutter development, but must be completed before public production launch:
 
-Latest reported state before these three fixes:
+1. Provision staging and production infrastructure.
+2. Configure production database, cache, queue, mail, filesystem, HTTPS, trusted proxies, and secrets.
+3. Enable monitoring, error tracking, structured logs, and operational alerts.
+4. Schedule database and uploaded-file backups.
+5. Perform and document a restore test.
+6. Run migration dry runs, production smoke tests, and rollback drills.
+7. Review upload security, rate limits, session cookies, CORS, and sensitive audit data.
+
+## Flutter handoff
+
+The backend is ready to support native Flutter development for both customer and driver roles.
+
+Recommended Flutter foundation:
 
 ```text
-OpenAPI lint: successful
-MySQL concurrency suite: successful
-SQLite feature suite: failed with three web tests
+Dio
+Riverpod
+freezed / json_serializable
+flutter_secure_storage
+go_router
 ```
 
-A new workflow run is required. Do not claim it passes until GitHub Actions confirms it.
+Recommended first customer milestone:
 
-## API documentation
+1. Environment and API client setup.
+2. Login, registration, token refresh/revocation handling, and logout.
+3. Package list and package detail.
+4. Booking creation and booking history.
+5. Booking detail and payment proof upload.
 
-Canonical contract: `docs/openapi.yaml`.
+Recommended driver milestone:
 
-Web-only routes are not part of OpenAPI. Canonical OpenAPI still needs dashboard, CSV response, exact schemas, and remaining admin API coverage.
+1. Driver onboarding and document upload.
+2. Vehicle management.
+3. Assignment offer list and response.
+4. Trip status workflow.
+5. Point balance and withdrawal request.
 
-## Next recommended work
+Flutter development should use a staging API and must not rely on production data.
 
-1. Confirm the SQLite feature suite is green after the redirect, root-test, and booking-render fixes.
-2. Complete canonical OpenAPI coverage.
-3. Start customer web.
-4. Start Flutter driver integration.
+## Next active phase
+
+```text
+Primary: Flutter customer and driver applications
+Parallel: staging and production hardening
+Backend feature phase: closed
+```
 
 ## Response format rule
 
-After backend changes respond in this exact order:
+After backend changes, respond in this exact order:
 
 1. **Changes**
 2. **Endpoint changes**
