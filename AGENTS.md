@@ -39,6 +39,29 @@ The next product-development phase is Flutter application development and stagin
 - Risk-based rate limiting, queued notifications, concurrency-safe booking and withdrawal operations, idempotent rewards, audit trails, CSV export, health checks, backup/deploy scripts, and automated CI.
 - GitHub Actions jobs for OpenAPI lint, SQLite feature tests, and MySQL concurrency tests.
 
+## Pending product decision: driver point rewards
+
+**Read `docs/POINT_REWARD_DECISION_PENDING.md` before changing assignments, booking completion rewards, point balances, conversion rates, or withdrawals.**
+
+The current reward implementation is an MVP placeholder, not a finalized product policy:
+
+```text
+Completed trip reward   = 100 points
+Rupiah per point        = Rp1.000
+Minimum withdrawal      = 100 points
+```
+
+These defaults come from `config/offroad.php`, but the model remains effectively hardcoded because every completed trip uses one fixed reward and assignment responses do not expose any reward estimate before the driver accepts.
+
+Agent rules:
+
+- Do not treat the current values or formula as final.
+- Do not hardcode the same values in Flutter.
+- Do not add promised or estimated assignment rewards without an explicit product decision.
+- Preserve current behavior until the project owner approves the formula, timing, visibility, guarantee level, conversion rate, withdrawal threshold, and reversal rules.
+- A future reward-policy change may affect assignment, booking lifecycle, point summary/ledger, withdrawal, dashboard, report, and audit endpoints. The complete impact list and rationale are documented in `docs/POINT_REWARD_DECISION_PENDING.md`.
+- Any approved change must update `docs/openapi.yaml`, Postman E2E documentation, feature tests, concurrency tests, and historical snapshot/migration behavior where applicable.
+
 ## Shared domain services
 
 - `BookingLifecycleService` is canonical for booking transitions, cancellation propagation, row locking, completion rewards, and ledger idempotency.
@@ -63,6 +86,7 @@ The next product-development phase is Flutter application development and stagin
 - Handle revoked tokens, suspended/inactive users, validation errors, pagination, enum values, upload limits, offline failures, retries, and idempotent actions explicitly.
 - Prefer additive backend changes. Breaking response changes require API versioning or an agreed migration plan.
 - Keep customer and driver roles separated at navigation and authorization layers while sharing reusable networking, auth, error, and storage infrastructure.
+- Do not show a promised assignment reward until the backend exposes an approved reward contract. Current point constants must not be duplicated in Flutter.
 
 ## CI requirements
 
@@ -88,5 +112,6 @@ The next product-development phase is Flutter application development and stagin
 - Admin Web functional scope: **completed**.
 - Shared Admin Web layout: **completed**.
 - Automated backend CI: **green**.
+- Driver point reward policy: **pending product decision; current behavior is an MVP placeholder**.
 - Next active phase: **Flutter customer and driver applications**.
 - Separate operational track: staging, production hardening, monitoring, backup verification, and deployment.
