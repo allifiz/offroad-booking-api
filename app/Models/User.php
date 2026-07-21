@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -33,5 +34,15 @@ class User extends Authenticatable
     public function driverProfile(): HasOne
     {
         return $this->hasOne(DriverProfile::class);
+    }
+
+    public function bookingsAsCustomer(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'customer_id');
+    }
+
+    public function paymentsAsCustomer(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'customer_id');
     }
 }
