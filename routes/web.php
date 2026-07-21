@@ -8,6 +8,7 @@ use App\Http\Controllers\Web\Admin\DashboardController;
 use App\Http\Controllers\Web\Admin\DriverVerificationController;
 use App\Http\Controllers\Web\Admin\PaymentController;
 use App\Http\Controllers\Web\Admin\ReportController;
+use App\Http\Controllers\Web\Admin\TourPackageController;
 use App\Http\Controllers\Web\Admin\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,9 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
     Route::middleware(['auth', 'admin.web'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        Route::resource('tour-packages', TourPackageController::class)
+            ->except('show');
 
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
