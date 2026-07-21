@@ -10,202 +10,289 @@ Repository: `allifiz/offroad-booking-api`
 |---|---|
 | Backend business flow | Completed and manually verified |
 | Current Admin Web functionality | Completed |
-| Current Admin Web visual quality | Good baseline |
-| Admin UX clarity | Needs enhancement |
-| Full Admin UI redesign | Planned |
-| Target Figma design review | Blocked by Figma access |
-| Implementation against final Figma | Not started |
+| Current Admin UI baseline | Completed |
+| Admin UX enhancement | Planned |
+| Full visual redesign | Planned |
+| Figma access | Available |
+| Figma design review | Initial review completed |
+| Implementation | Not started |
 
-The current Admin Web is functionally complete, but the next Admin Web phase is a full UI/UX enhancement. This work is separate from backend MVP completion and must be tracked independently.
+This track is independent from backend MVP completion. The backend workflow is already accepted and must remain the source of truth. The redesign exists to improve clarity, speed, consistency, and visual quality without redefining existing business behavior.
+
+## Canonical implementation principle
+
+```text
+Figma = visual reference and interaction pattern
+Existing backend = workflow and business-rule source of truth
+```
+
+Implementation must follow these rules:
+
+1. Preserve current booking, payment, assignment, verification, withdrawal, audit, and point behavior.
+2. When a Figma interaction conflicts with existing backend behavior, adapt the UX instead of changing the backend.
+3. Do not add product behavior merely because it appears in Figma.
+4. Reuse existing Web routes, controllers, services, authorization, validation, and database schema wherever possible.
+5. Core domain services must remain unchanged unless a separate approved backend change explicitly requires otherwise.
+6. JavaScript may improve interaction, but it must not become the authority for authorization or business validation.
+7. Modal forms must still submit to canonical server-side actions.
+8. Existing non-JavaScript URLs should remain usable as fallback where practical.
+9. Point-related UI must respect `docs/POINT_REWARD_DECISION_PENDING.md`.
 
 ## Target Figma
 
-Proposed full Admin UI reference:
+Accessible design reference:
 
 ```text
-https://www.figma.com/design/GuPVPzUgzd4u5qn0T8ZGJW/Admin-WOG?node-id=1627-37733&t=RlmsbT2ZSGrSEGjX-1
+https://www.figma.com/design/LsmerjTpUvpqRP8awPLg7q/Untitled?node-id=0-1&t=7aiBXytLVCxesQki-1
 ```
 
 Figma identifiers:
 
 ```text
-file key: GuPVPzUgzd4u5qn0T8ZGJW
-node id: 1627:37733
+file key: LsmerjTpUvpqRP8awPLg7q
+page root: 0:1
 ```
 
-Current review status:
+Reviewed frames:
 
-- The target file/node was requested through the Figma connector.
-- The connector could not retrieve design context because the connected Figma account does not have editor access to the file.
-- The design must therefore be treated as a proposed target, not yet as an approved implementation specification.
-- Before implementation starts, grant the connected Figma account editor access or provide an accessible duplicate/file.
-- Once access is available, inspect exact layout, components, breakpoints, tokens, modal patterns, empty states, tables, filters, forms, icons, and responsive behavior before changing Blade views.
+```text
+Dashboard       = 1:4414
+Cari Driver     = 1:4508
+Orderan         = 1:4968
+Paket Offroad   = 1:5028
+Detail Pesanan  = 1:5089
+Pengaturan      = 1:5152
+Data Mitra      = 1:5197
+Login           = 1:5358
+Success popup   = 1:5346
+```
 
-## Feasibility
+Design direction:
 
-A full redesign to match the referenced Figma is expected to be feasible with the existing stack:
+- light gray application background;
+- white floating sidebar and topbar;
+- rounded white content cards;
+- soft shadows;
+- compact data tables;
+- colored status badges;
+- contextual dashboard cards;
+- modal/popup feedback;
+- desktop-first layout that must be adapted responsively;
+- Roboto-style visual hierarchy;
+- restrained blue primary accent with semantic status colors.
+
+The implementation does not need to be pixel-perfect. It must preserve the same visual language, hierarchy, component patterns, and overall user experience while remaining practical for Laravel Blade and existing project data.
+
+## Feasibility and expected impact
+
+The redesign is feasible with the existing stack:
 
 ```text
 Laravel Blade
 Tailwind CSS
-Alpine.js / lightweight JavaScript
+Alpine.js or lightweight JavaScript
 Vite
 Existing session-based Admin Web routes
 ```
 
-The design should be adapted to Blade and existing project conventions rather than copying generated React code from Figma.
-
 Expected implementation profile:
 
-- Most work: Blade, Tailwind, Alpine.js, layout components, modal components, interaction states, responsive behavior, and UX copy.
-- Some work: Web Admin controllers and queries to prepare better view models, valid action lists, counts, and dependent selections.
-- Limited work: Web route additions for optional AJAX search or bulk actions.
-- Core API/domain behavior should remain unchanged unless an approved UX requirement cannot be supported by current contracts.
-
-## Design implementation rules
-
-1. Preserve all existing domain rules in backend services and controllers.
-2. Do not move authorization, lifecycle validation, financial validation, assignment ownership, reward, or ledger rules into JavaScript.
-3. Modal forms must submit to canonical server-side actions.
-4. Validation errors must reopen the correct modal and preserve old input.
-5. Destructive and financial actions require explicit confirmation.
-6. Show only actions valid for the resource's current state.
-7. Prefer action-oriented Indonesian copy over raw enum values.
-8. Retain full-page detail views for information-dense modules.
-9. Use modal CRUD for short forms and contextual actions.
-10. Preserve direct URLs and accessible non-JavaScript fallback where practical.
-11. Do not hardcode pending point-policy values into the redesigned UI.
-12. Final implementation must follow the accessible Figma design once access is available.
-
-## Recommended modal strategy
-
-### Suitable for modal-based interaction
-
-- Create/edit tour package.
-- Create/edit company vehicle.
-- Customer suspend/reactivate.
-- Payment approve/reject.
-- Driver approve/reject.
-- Driver document preview and verification.
-- Driver vehicle verification.
-- Withdrawal approve/reject/mark paid.
-- Booking status transition.
-- Driver assignment offer/cancel.
-- Participant allocation editor.
-- Create/edit travel group.
-- Attach booking to travel group.
-- Confirmation for destructive actions.
-
-### Keep as full-page detail
-
-- Booking detail.
-- Driver detail and verification workspace.
-- Customer detail.
-- Travel group detail.
-- Withdrawal detail if it includes financial audit context.
-- Reports.
-- Audit-log detail.
-
-These detail pages may open action modals but should not themselves be replaced by oversized modal dialogs.
-
-## Module progress
-
-### 1. Global layout and navigation
-
-Status: `planned`
-
-Current UX risks:
-
-- Eleven navigation items have equal visual weight.
-- Operational, master-data, partner, financial, report, and audit modules are not grouped.
-- Indonesian and English labels are mixed.
-- There are no visible queue badges for pending work.
-- Page headers, action locations, filters, empty states, and row actions are not fully standardized.
-
-Planned enhancement:
-
-- Rebuild global layout according to the final Figma.
-- Group navigation into operational categories.
-- Add pending queue badges where useful.
-- Standardize breadcrumbs, page titles, descriptions, primary actions, filters, table actions, pagination, flash messages, validation states, and empty states.
-- Create reusable Blade components for modal, drawer, badge, button, table, filter bar, confirmation, form field, and status timeline.
-- Add responsive desktop/mobile navigation consistent with the Figma design.
-
-Backend/Web adjustment:
-
-- Shared pending counts may require a view composer or dedicated navigation data provider.
-- No REST API changes expected.
-
-Potential data sources/routes:
-
 ```text
-GET /admin
-GET /admin/payments?status=pending
-GET /admin/drivers?verification_status=pending
-GET /admin/withdrawals?status=pending
-GET /admin/bookings
+85–90% Blade, Tailwind, components, modal behavior, and UX copy
+10–15% Web Controller queries, view models, counts, filters, and eager loading
+0% intended change to core workflow or domain services
 ```
 
-### 2. Dashboard
+The redesign must not require React, SPA conversion, WebSocket, Redis presence tracking, GPS tracking, or a new API version.
+
+## Approved interpretation of ambiguous Figma features
+
+| Figma concept | Approved safe interpretation |
+|---|---|
+| Driver Online | `availability_status = available` |
+| Online/offline badges | Existing availability state, not real-time presence |
+| Jadwal/calendar | Read-only projection of existing booking `tour_date` and trip status |
+| Orderan Masuk | Existing bookings that require a valid admin action |
+| Terima order | Existing valid booking status transition only |
+| Cancel order | Existing cancellation flow and validation |
+| Cari Driver | Existing eligible/approved/available driver data |
+| Driver assignment | Existing assignment offer flow |
+| Tambah Mitra | Hide, relabel, or map to an existing action; do not create a new admin-created driver flow |
+| Table checkbox | Selection affordance only unless an existing bulk action already exists |
+| Notification icon | Existing pending queue counts or link shortcuts |
+| Success popup | Visual feedback after an existing successful server action |
+| Calendar navigation | UI filtering only, no drag-and-drop rescheduling |
+| Settings/profile screen | Implement only existing supported account actions unless separately approved |
+
+Explicitly out of scope:
+
+- real-time driver presence;
+- driver heartbeat;
+- location/GPS tracking;
+- WebSocket updates;
+- drag-and-drop rescheduling;
+- bulk mutation endpoints;
+- admin-created driver onboarding;
+- new point/reward behavior;
+- new booking lifecycle states;
+- new payment or withdrawal rules.
+
+## Global UI foundation
 
 Status: `planned`
 
-Current UX risks:
+Planned components:
 
-- Metrics may not directly communicate what needs action today.
-- Queue shortcuts and operational priority may not be visually dominant enough.
-- Users may need to navigate into several modules to discover pending work.
+- Admin application shell;
+- responsive sidebar;
+- topbar;
+- page header and breadcrumbs;
+- primary/secondary/destructive buttons;
+- status badges;
+- modal and confirmation dialog;
+- success/error popup;
+- filter bar;
+- search input;
+- table shell;
+- pagination shell;
+- empty state;
+- loading state;
+- form field and error message;
+- tabs and step indicators;
+- compact statistic cards;
+- queue badge;
+- drawer for mobile actions where a modal is unsuitable.
 
-Planned enhancement:
+Implementation constraints:
 
-- Adapt dashboard cards, charts, queues, recent activity, and shortcuts to the final Figma.
-- Separate informational metrics from actionable queues.
-- Make each actionable card lead to a filtered module view.
-- Use consistent date and currency formatting.
-- Add clear loading, empty, and zero states.
+- use reusable Blade components and partials;
+- retain CSRF and method spoofing;
+- reopen the correct modal after validation errors;
+- preserve `old()` input;
+- destructive and financial actions require explicit confirmation;
+- action labels should be written in Indonesian and action-oriented;
+- raw enums should not be exposed when a clearer label is available;
+- status colors must be consistent across all modules.
 
-Backend/Web adjustment:
+## Module plan
 
-- Dashboard controller query/view model may need additional grouped counts or trend data required by Figma.
-- Existing dashboard route can remain canonical.
+### 1. Login
 
-Affected route/API:
+Status: `planned`
+
+Target:
+
+- adopt the Figma split-layout visual style;
+- retain existing email/password authentication;
+- display validation and authentication errors clearly;
+- preserve the existing login route and session behavior.
+
+Routes:
+
+```text
+GET  /admin/login
+POST /admin/login
+```
+
+Backend impact: none.
+
+### 2. Global navigation and topbar
+
+Status: `planned`
+
+Target:
+
+- adopt the Figma floating sidebar and topbar;
+- group existing modules into understandable sections;
+- use icons and active states consistently;
+- show pending queue badges when useful;
+- retain access to every existing Admin module even when the Figma has fewer menu items.
+
+Recommended grouping:
+
+```text
+Operasional
+- Dashboard
+- Booking
+- Pembayaran
+- Travel Group
+
+Mitra dan Armada
+- Driver
+- Kendaraan
+- Withdrawal
+
+Master Data
+- Paket Wisata
+- Customer
+
+Monitoring
+- Laporan
+- Audit Log
+```
+
+Potential Web adjustment:
+
+- shared counts for pending payments, driver verification, and withdrawals;
+- implement through a view composer or shared navigation data provider.
+
+REST API impact: none.
+
+### 3. Dashboard
+
+Status: `planned`
+
+Target mapping from Figma:
+
+- statistic cards use existing totals and aggregates;
+- driver list uses existing driver profiles and availability;
+- `Driver Online` means `availability_status = available`;
+- calendar shows existing bookings/trips by `tour_date`;
+- detail cards show trips relevant to the selected date;
+- `Top Jalur` maps to tour-package performance using existing booking data;
+- actionable cards link to filtered existing modules.
+
+Existing route:
 
 ```text
 GET /admin
+```
+
+Potential Web Controller adjustments:
+
+- revenue aggregate;
+- count of approved/active drivers;
+- count of trips/bookings by period;
+- available driver list;
+- upcoming trip list;
+- package ranking;
+- pending queue counts.
+
+These are read-only queries. Do not modify domain behavior.
+
+API endpoint potentially observed but not required to change:
+
+```text
 GET /api/v1/admin/dashboard
 ```
 
-Reason:
+Only update the API when a separate client explicitly requires the same new fields.
 
-- The Web route may need richer server-rendered data.
-- The API endpoint is affected only if the same new dashboard data must also be exposed to another client; otherwise it should remain unchanged.
-
-### 3. Tour packages
+### 4. Tour packages
 
 Status: `planned`
 
-Current UX risks:
+Target:
 
-- Create/edit uses separate pages for a short master-data form.
-- Slug and implementation details may be too prominent for operational users.
-- Status and destructive actions are not strongly differentiated.
-- Filter reset and row-action consistency need improvement.
+- table styled like the Figma package table;
+- create and edit use modal forms;
+- row actions use a compact action menu;
+- status displayed as clear semantic badges;
+- slug and technical fields moved to an advanced area;
+- delete/deactivate actions use confirmation dialogs;
+- existing pagination, filter, and validation remain canonical.
 
-Planned enhancement:
-
-- Move create/edit into reusable modal forms.
-- Keep slug under an advanced section or auto-generate it.
-- Add clear active/inactive actions and delete/archive confirmation.
-- Standardize search, status filters, reset button, badges, and row action menu.
-
-Backend/Web adjustment:
-
-- Existing resource routes should continue to work.
-- Controller responses may return modal-friendly validation context or support partial rendering if chosen.
-- No domain change expected.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET    /admin/tour-packages
@@ -214,42 +301,27 @@ POST   /admin/tour-packages
 GET    /admin/tour-packages/{tourPackage}/edit
 PUT    /admin/tour-packages/{tourPackage}
 DELETE /admin/tour-packages/{tourPackage}
-
-GET    /api/v1/admin/tour-packages
-POST   /api/v1/admin/tour-packages
-GET    /api/v1/admin/tour-packages/{tourPackage}
-PUT    /api/v1/admin/tour-packages/{tourPackage}
-DELETE /api/v1/admin/tour-packages/{tourPackage}
 ```
 
-Reason:
+Implementation decision:
 
-- Web routes are directly used by modal forms.
-- API endpoints need adjustment only if request/response behavior changes; visual conversion alone does not require it.
+- modal submit reuses `POST`, `PUT`, and `DELETE` routes;
+- create/edit pages remain as fallback routes;
+- no REST API or domain change expected.
 
-### 4. Company vehicles
+### 5. Vehicles
 
 Status: `planned`
 
-Current UX risks:
+Target:
 
-- CRUD is page-based even though the form is suitable for modal interaction.
-- Operational availability and verification/ownership concepts may be unclear.
-- Destructive actions need stronger consequences and confirmation.
+- modal create/edit;
+- clear distinction between ownership, verification, and availability;
+- semantic badges;
+- confirmation for availability or destructive actions;
+- responsive table/card fallback.
 
-Planned enhancement:
-
-- Modal create/edit.
-- Clear status badges and action labels.
-- Confirmation before delete or availability changes.
-- Standardized row action menu and responsive table/card view.
-
-Backend/Web adjustment:
-
-- Existing Web resource routes remain usable.
-- No core API/domain change expected.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET    /admin/vehicles
@@ -258,39 +330,24 @@ POST   /admin/vehicles
 GET    /admin/vehicles/{vehicle}/edit
 PUT    /admin/vehicles/{vehicle}
 DELETE /admin/vehicles/{vehicle}
-
-GET    /api/v1/admin/vehicles
-POST   /api/v1/admin/vehicles
-GET    /api/v1/admin/vehicles/{vehicle}
-PUT    /api/v1/admin/vehicles/{vehicle}
-DELETE /api/v1/admin/vehicles/{vehicle}
 ```
 
-### 5. Travel groups
+Backend impact: none expected beyond view data preparation.
+
+### 6. Travel groups
 
 Status: `planned`
 
-Current UX risks:
+Target:
 
-- Relationship between travel group, booking, assignment, vehicle, and participant allocation is not obvious.
-- Creating a group and attaching bookings are separate concepts without enough guidance.
-- Admin can potentially select the wrong booking without rich context.
+- list styled consistently with the Figma data-table language;
+- create group through modal;
+- keep detail as a full workspace;
+- attach booking through a searchable modal;
+- show booking code, date, package, participants, payment status, and booking status before attachment;
+- retain existing attach-booking rule and validation.
 
-Planned enhancement:
-
-- Create/edit group through modal.
-- Attach booking through searchable selection modal.
-- Display booking code, date, package, participant count, payment status, and booking status during selection.
-- Add warnings for date/package mismatch where relevant.
-- Keep group detail as a full workspace.
-
-Backend/Web adjustment:
-
-- Existing attach-booking action can remain.
-- Controller may need richer candidate-booking data and server-side search.
-- Add an AJAX candidate endpoint only if the dataset becomes too large for server-rendered options.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET   /admin/travel-groups
@@ -299,41 +356,28 @@ POST  /admin/travel-groups
 GET   /admin/travel-groups/{travelGroup}
 PATCH /admin/travel-groups/{travelGroup}/status
 POST  /admin/travel-groups/{travelGroup}/bookings
-
-GET  /api/v1/admin/travel-groups
-POST /api/v1/admin/travel-groups
-GET  /api/v1/admin/travel-groups/{travelGroup}
-POST /api/v1/admin/travel-groups/{travelGroup}/bookings
 ```
 
-Reason:
+Backend impact:
 
-- Existing actions support the flow.
-- New API work is required only if searchable candidates or bulk changes must be exposed as an API contract.
+- potentially richer candidate-booking query;
+- no new endpoint unless dataset size later proves server-side search necessary;
+- no domain change.
 
-### 6. Customers
+### 7. Customers
 
 Status: `planned`
 
-Current UX risks:
+Target:
 
-- Suspend/reactivate consequences may not be clear.
-- Generic status forms expose implementation state rather than a user-oriented action.
-- Admin needs context before disabling access.
+- searchable and filterable list;
+- full-page detail retained;
+- replace generic status dropdown with contextual actions;
+- use `Suspend customer` and `Aktifkan kembali` actions;
+- confirmation explains access consequences;
+- do not persist a suspension reason unless separately approved.
 
-Planned enhancement:
-
-- Replace status dropdown with contextual actions: `Suspend customer` or `Aktifkan kembali`.
-- Confirmation modal explains access/token effects.
-- Show related booking/payment activity before confirmation.
-- Add reason field only if product decides to persist suspension reasons.
-
-Backend/Web adjustment:
-
-- Existing status endpoint supports state changes.
-- Persisted suspension reason would require a migration, model field, validation, audit update, and API/Web contract change; this is optional and not yet approved.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET   /admin/customers
@@ -341,47 +385,26 @@ GET   /admin/customers/{customer}
 PATCH /admin/customers/{customer}/status
 ```
 
-Potential API impact if customer-status behavior changes:
+Backend impact: none.
 
-```text
-GET   /api/v1/admin/customers
-GET   /api/v1/admin/customers/{customer}
-PATCH /api/v1/admin/customers/{customer}/status
-```
-
-Note: confirm current API availability before adding or documenting customer-admin API endpoints.
-
-### 7. Bookings
+### 8. Bookings
 
 Status: `highest priority / planned`
 
-Current UX risks:
+Target:
 
-- Status, assignment, cancellation, participant allocation, payment context, and trip context are combined without a guided sequence.
-- Raw booking enum choices can include invalid transitions.
-- Driver and vehicle are selected independently, so mismatched ownership is possible before server validation.
-- Capacity, schedule conflict, availability, and verification context are not sufficiently visible.
-- Participant allocation requires repetitive per-participant submits.
-- Destructive actions need clearer consequences.
+- use the Figma order/detail visual language;
+- retain a full-page booking workspace;
+- show timeline/context for payment, assignment, allocation, and trip state;
+- replace raw status dropdown with valid next-action buttons;
+- actions open contextual confirmation modals;
+- never display actions that violate the current lifecycle;
+- provide a clear route to payment verification when payment blocks the next action;
+- assignment modal shows eligible drivers and their own eligible vehicles;
+- participant allocation remains aligned with existing server behavior;
+- destructive actions show consequences.
 
-Planned enhancement:
-
-- Replace generic status select with valid next-action buttons.
-- Use contextual modals for confirm, start, complete, and cancel.
-- Assignment modal shows eligible drivers and only their eligible vehicles.
-- Display verification, availability, capacity, tour date, and schedule-conflict context.
-- Use a single participant-allocation modal with full capacity overview and one final save action.
-- Confirmation modal for assignment cancellation.
-- Preserve point-policy warning: do not display a fixed reward until product policy is approved.
-
-Backend/Web adjustment:
-
-- Web controller should provide valid transitions from the canonical lifecycle rules.
-- Web controller/view model should provide eligible driver-vehicle pairs.
-- Bulk participant allocation may need a new or expanded server action because the current Web action processes one participant allocation payload at a time.
-- Business validation remains canonical in backend services.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET   /admin/bookings
@@ -390,86 +413,66 @@ PATCH /admin/bookings/{booking}/status
 POST  /admin/bookings/{booking}/assignments
 PATCH /admin/bookings/{booking}/assignments/{assignment}/cancel
 PUT   /admin/bookings/{booking}/participant-allocations
-
-GET   /api/v1/admin/bookings
-GET   /api/v1/admin/bookings/{booking}
-PATCH /api/v1/admin/bookings/{booking}/status
-POST  /api/v1/admin/bookings/{booking}/driver-assignments
-PATCH /api/v1/admin/bookings/{booking}/driver-assignments/{driverAssignment}/cancel
-GET   /api/v1/admin/bookings/{booking}/participant-allocations
-PUT   /api/v1/admin/bookings/{booking}/participant-allocations
 ```
 
-Reason:
+Implementation decisions:
 
-- Existing endpoints support individual actions.
-- A bulk allocation UX may require request-schema expansion or a new endpoint.
-- Assignment responses may need richer eligibility data only if server-side dependent search is required.
-- Any reward information in assignment UI is blocked by `docs/POINT_REWARD_DECISION_PENDING.md`.
+- existing lifecycle service remains authoritative;
+- valid next actions are derived from current state;
+- driver/vehicle dependent selection is handled by view data and JavaScript filtering;
+- server validation remains mandatory;
+- do not add bulk allocation if it requires a new contract;
+- keep per-participant save or provide a visual grouped editor that still submits through existing supported actions;
+- no point estimate is shown until point policy is approved.
 
-### 8. Payments
+Core services explicitly protected:
+
+```text
+BookingLifecycleService
+assignment validation rules
+payment prerequisites
+completion reward behavior
+```
+
+### 9. Payments
 
 Status: `high priority / planned`
 
-Current UX risks:
+Target:
 
-- Payment proof opens in another tab.
-- Approve and reject are presented through one generic select.
-- Rejection reason appears even when approving.
-- Financial consequences are not emphasized strongly enough.
+- payment queue uses compact table/card styling;
+- proof preview opens inside a modal when supported by browser format;
+- separate `Setujui pembayaran` and `Tolak pembayaran` actions;
+- rejection reason only appears in the reject modal;
+- decision summary includes customer, booking, method, and amount;
+- processed payments become read-only.
 
-Planned enhancement:
-
-- Preview image/PDF in modal or drawer.
-- Separate `Setujui pembayaran` and `Tolak pembayaran` actions.
-- Show booking total versus submitted amount.
-- Show rejection reason only in reject modal.
-- After processing, optionally navigate to the next pending payment.
-
-Backend/Web adjustment:
-
-- Existing PATCH action supports approve/reject.
-- Controller may prepare `next_pending_payment_id` or filtered redirect behavior.
-- Secure inline file preview may need a protected file route only if public storage URLs are not acceptable.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET   /admin/payments
 GET   /admin/payments/{payment}
 PATCH /admin/payments/{payment}
-
-GET   /api/v1/admin/payments
-GET   /api/v1/admin/payments/{payment}
-PATCH /api/v1/admin/payments/{payment}/verification
 ```
 
-### 9. Driver verification
+Backend impact: none.
+
+### 10. Driver verification
 
 Status: `high priority / planned`
 
-Current UX risks:
+Target:
 
-- Driver profile, documents, vehicles, and final decision are mixed together.
-- Approval hierarchy is not obvious.
-- Document preview is separate from verification actions.
-- Raw `approved/rejected` enum labels are exposed.
-- Rejection reason fields are visible even when not needed.
+- adopt the Figma `Data Driver` table language;
+- interpret online status through existing availability;
+- retain full-page detail/verification workspace;
+- separate profile, documents, and vehicles visually;
+- preview document through modal;
+- use contextual approve/reject actions;
+- show rejection reason only when rejecting;
+- make parent and child verification statuses explicit.
 
-Planned enhancement:
-
-- Use tabs or stepper: Profile, Documents, Vehicles, Decision.
-- Preview documents in modal/drawer.
-- Add explicit verification actions for each document and vehicle.
-- Show checklist of unresolved items before final driver approval.
-- Separate approve and reject modals with contextual copy.
-
-Backend/Web adjustment:
-
-- Current Web routes only expose profile and vehicle decisions; document verification must be confirmed and may require additional Web routes/controllers even though API document-verification endpoints already exist.
-- Controller should supply approval readiness and unresolved-item counts.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET   /admin/drivers
@@ -478,89 +481,69 @@ PATCH /admin/drivers/{driverProfile}
 PATCH /admin/drivers/{driverProfile}/vehicles/{vehicle}
 ```
 
-Existing API endpoints that may need Web equivalents or shared behavior:
+Existing API actions that may be reused conceptually by Web Admin if document verification is expanded:
 
 ```text
-PATCH /api/v1/admin/drivers/{driverProfile}/verification
-PATCH /api/v1/admin/driver-vehicles/{vehicle}/verification
 PATCH /api/v1/admin/driver-documents/{driverDocument}/verification
 PATCH /api/v1/admin/driver-vehicles/{vehicle}/documents/{vehicleDocument}/verification
 ```
 
-Reason:
+Implementation constraint:
 
-- The redesigned verification workspace should not imply that profile approval automatically approves documents or vehicles.
-- Web actions may need to reuse the same canonical verification logic as API controllers.
+- do not redesign driver onboarding behavior;
+- do not add admin-created driver accounts;
+- do not add real-time presence.
 
-### 10. Withdrawals
+Potential backend adjustment:
+
+- a small Web route/controller action may be needed only if current Admin Web cannot process document-level verification that already exists in the API;
+- reuse existing service/validation logic rather than create a new domain rule.
+
+### 11. Withdrawals
 
 Status: `high priority / planned`
 
-Current UX risks:
+Target:
 
-- The UI displays approved, rejected, and paid together even when not all transitions are valid.
-- `Simpan status` is too generic for a financial action.
-- Marking paid lacks a strong confirmation step.
-- Transfer reference is not currently stored.
+- use state-specific actions instead of one generic status dropdown;
+- pending: `Setujui` or `Tolak`;
+- approved: `Tandai sudah dibayar`;
+- rejected/paid: read-only;
+- confirmation modal summarizes driver, points, amount, bank, and account;
+- retain current allowed transitions and ledger behavior.
 
-Planned enhancement:
-
-- Pending: separate approve and reject actions.
-- Approved: show only `Tandai sudah dibayar`.
-- Rejected/paid: read-only state.
-- Confirmation modal shows driver, bank, account, points, and amount.
-- Add transfer reference/date only after explicit product approval.
-
-Backend/Web adjustment:
-
-- Existing transition endpoint supports current state changes.
-- Transfer reference/date requires schema, migration, validation, audit, report, API, and Web changes; not part of visual-only enhancement.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET   /admin/withdrawals
 GET   /admin/withdrawals/{withdrawal}
 PATCH /admin/withdrawals/{withdrawal}
-
-GET   /api/v1/admin/withdrawals
-GET   /api/v1/admin/withdrawals/{withdrawal}
-PATCH /api/v1/admin/withdrawals/{withdrawal}
 ```
 
-Related driver endpoints:
+Implementation decision:
+
+- do not add transfer-reference fields;
+- do not change conversion, minimum points, or balance categories;
+- point policy remains pending.
+
+Core service explicitly protected:
 
 ```text
-GET  /api/v1/driver/withdrawals
-POST /api/v1/driver/withdrawals
-GET  /api/v1/driver/points/summary
-GET  /api/v1/driver/points/ledger
+WithdrawalService
 ```
 
-Point/conversion changes remain governed by `docs/POINT_REWARD_DECISION_PENDING.md`.
-
-### 11. Reports
+### 12. Reports
 
 Status: `planned`
 
-Current UX risks:
+Target:
 
-- Export actions may not clearly explain filters, date range, file contents, or generation state.
-- Reports may feel disconnected from operational modules.
+- adopt Figma table/card styling;
+- clearer report groups and date filters;
+- preserve existing CSV export behavior;
+- no chart or metric should invent data unavailable from current reports.
 
-Planned enhancement:
-
-- Match report cards/filter layout to Figma.
-- Explain each export and current filter scope.
-- Add clear empty, loading, download, and error feedback.
-- Preserve canonical CSV generation implementation.
-
-Backend/Web adjustment:
-
-- Existing export routes remain canonical.
-- Additional filters require synchronized Web/API validation and export query changes.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET /admin/reports
@@ -568,161 +551,205 @@ GET /admin/reports/export/bookings
 GET /admin/reports/export/payments
 GET /admin/reports/export/drivers
 GET /admin/reports/export/withdrawals
-
-GET /api/v1/admin/reports/export/bookings
-GET /api/v1/admin/reports/export/payments
-GET /api/v1/admin/reports/export/drivers
-GET /api/v1/admin/reports/export/withdrawals
 ```
 
-### 12. Audit logs
+Backend impact: none expected.
+
+### 13. Audit logs
 
 Status: `planned`
 
-Current UX risks:
+Target:
 
-- Before/after payloads may be difficult for operational users to interpret.
-- Technical event names and identifiers may need human-readable labels.
+- consistent filter bar and table;
+- readable actor/action/resource/status labels;
+- full-page detail retained;
+- before/after data displayed as structured sections;
+- no mutation or bulk action added.
 
-Planned enhancement:
-
-- Redesign index and detail according to Figma.
-- Add readable event labels, actor/resource context, and structured before/after diff.
-- Keep raw payload available under an advanced section.
-- Add consistent filter and empty-state behavior.
-
-Backend/Web adjustment:
-
-- No endpoint change expected for visual formatting.
-- New filters or enriched actor/resource labels may require query/view-model changes.
-
-Affected routes/API:
+Existing Web routes:
 
 ```text
 GET /admin/audit-logs
 GET /admin/audit-logs/{auditLog}
-
-GET /api/v1/admin/audit-logs
-GET /api/v1/admin/audit-logs/{auditLog}
 ```
 
-## Backend changes classification
+Backend impact: none.
 
-### No core backend change expected
+### 14. Admin profile/settings
 
-- Layout redesign.
-- Navigation grouping.
-- Modal open/close behavior.
-- Button, table, badge, filter, pagination, and empty-state styling.
-- Action-oriented labels.
-- Showing only valid actions when data is already available.
-- Confirmation dialogs.
-- Public-storage image/document preview.
-- Existing single-resource form submissions.
+Status: `deferred unless existing routes support it`
 
-### Web controller/query adjustment likely
+Figma contains a profile/settings screen, but this must not automatically become a new backend feature.
 
-- Shared navigation queue counts.
-- Dashboard-specific metrics required by Figma.
-- Valid next booking transitions.
-- Eligible driver and vehicle pair preparation.
-- Candidate booking search for travel groups.
-- Modal validation context and redirect behavior.
-- Next pending payment shortcut.
-- Driver verification readiness summary.
-- Human-readable audit-log presentation.
+Safe implementation options:
 
-### Endpoint or schema adjustment possible
+- show admin identity and logout only;
+- link settings icon to existing supported actions;
+- hide unsupported name/password editing controls.
 
-- Bulk participant allocation.
-- AJAX search endpoints for large datasets.
-- Protected document preview/download.
-- Persisted customer suspension reason.
-- Withdrawal transfer reference and paid timestamp fields.
-- New dashboard trend data exposed through API.
-- Any reward estimate or point value shown before assignment acceptance.
+Do not add profile or password-update endpoints as part of the visual redesign unless separately approved.
 
-Each possible backend/API change requires separate approval before implementation.
+## Modal strategy
 
-## Proposed implementation phases
+Suitable for modal interaction:
 
-### Phase 0 — Figma access and design audit
+- tour package create/edit;
+- vehicle create/edit;
+- booking valid status actions;
+- assignment offer/cancel;
+- participant allocation action UI;
+- payment approve/reject;
+- driver approve/reject;
+- document preview;
+- vehicle verification;
+- customer suspend/reactivate;
+- withdrawal approve/reject/mark paid;
+- travel group create;
+- attach booking;
+- destructive confirmations;
+- success feedback.
 
-Status: `blocked`
+Keep as full-page workspace:
 
-- Obtain editor access to the target Figma file.
-- Retrieve design context for the target node and related pages/components.
-- Identify desktop/mobile breakpoints.
-- Map Figma components and tokens to Blade/Tailwind components.
-- Confirm which screens exist and which Admin modules need custom adaptation.
-- Freeze the first implementation scope.
+- booking detail;
+- driver detail and verification;
+- travel group detail;
+- customer detail;
+- withdrawal financial detail;
+- reports;
+- audit-log detail.
+
+A modal must not be used when it hides important operational context or creates an oversized form.
+
+## Backend change policy
+
+### Allowed lightweight adjustments
+
+These do not count as business-flow changes:
+
+- additional read-only aggregate queries;
+- eager loading;
+- filtered collections;
+- pending queue counts;
+- view composers;
+- modal-specific view models;
+- valid-action lists derived from current state;
+- driver/vehicle pairing data;
+- server-rendered search/filter parameters;
+- Web-only document verification action that reuses existing logic.
+
+### Not allowed in this track
+
+- database migrations;
+- new lifecycle states;
+- changed booking transitions;
+- changed payment rules;
+- changed assignment eligibility;
+- changed verification rules;
+- changed withdrawal transitions;
+- changed point values or timing;
+- bulk mutation endpoints;
+- real-time driver state;
+- GPS/location tracking;
+- new mobile API behavior;
+- breaking response-contract changes.
+
+If any design requirement cannot be achieved without one of the above, adapt or omit the UI element and document the deviation.
+
+## Implementation phases
+
+### Phase 0 — Design mapping
+
+Status: `in progress`
+
+- Figma access confirmed;
+- key frames identified;
+- design language reviewed;
+- map each existing Admin module to the closest Figma pattern;
+- document intentional deviations caused by existing workflow.
 
 ### Phase 1 — UI foundation
 
 Status: `not started`
 
-- Design tokens.
-- Admin layout.
-- Sidebar/topbar/mobile navigation.
-- Modal and drawer system.
-- Buttons, badges, forms, table, filter, pagination, alert, and empty-state components.
-- Validation and flash-message behavior.
+- design tokens;
+- global layout;
+- sidebar/topbar;
+- Blade components;
+- modal system;
+- popup/flash system;
+- form and validation behavior;
+- table/filter/pagination system;
+- responsive behavior.
 
-### Phase 2 — Operational high-priority modules
-
-Status: `not started`
-
-- Dashboard.
-- Bookings.
-- Payments.
-- Driver verification.
-- Withdrawals.
-
-### Phase 3 — Master data and relationship modules
+### Phase 2 — Operational modules
 
 Status: `not started`
 
-- Tour packages.
-- Vehicles.
-- Travel groups.
-- Customers.
+Priority order:
+
+1. Dashboard
+2. Bookings
+3. Payments
+4. Driver verification
+5. Withdrawals
+
+### Phase 3 — Master and relationship modules
+
+Status: `not started`
+
+1. Tour packages
+2. Vehicles
+3. Travel groups
+4. Customers
 
 ### Phase 4 — Monitoring modules
 
 Status: `not started`
 
-- Reports.
-- Audit logs.
+1. Reports
+2. Audit logs
 
-### Phase 5 — QA and acceptance
+### Phase 5 — Acceptance
 
 Status: `not started`
 
-- Responsive checks.
-- Keyboard and screen-reader interaction.
-- Focus trapping and Escape behavior for modal/drawer.
-- Validation-error reopening.
-- Authorization checks.
-- Destructive/financial confirmation checks.
-- Existing backend feature tests.
-- New Admin Web feature tests.
-- Manual Admin Web acceptance against real local database.
+- functional regression tests;
+- authorization regression;
+- modal validation tests;
+- status-transition regression;
+- responsive desktop/tablet/mobile checks;
+- keyboard and focus behavior;
+- confirmation behavior;
+- manual Admin Web E2E against seeded/local database;
+- verify Postman-tested backend flow remains unchanged.
 
-## Completion criteria
+## Definition of done
 
-The Admin UI/UX enhancement is complete only when:
+The enhancement is complete only when:
 
-1. Final accessible Figma screens are implemented or deviations are documented.
-2. All current Admin Web functionality remains available.
-3. All state transitions remain enforced server-side.
-4. Modal validation behavior is reliable.
-5. Responsive and keyboard behavior is verified.
-6. No unauthorized action is exposed.
-7. Existing backend CI remains green.
-8. Relevant Admin Web tests are added and green.
-9. Manual Admin acceptance flow passes.
-10. Point-related UI does not present temporary policy as final.
+1. Admin Web adopts the Figma visual language across all existing modules.
+2. Existing workflows remain functionally unchanged.
+3. Every action still uses canonical backend validation and authorization.
+4. Invalid lifecycle actions are hidden or disabled with a clear reason.
+5. Modal validation and old input work correctly.
+6. Destructive and financial actions require confirmation.
+7. Tables, filters, pagination, empty states, and status badges are consistent.
+8. Core backend tests remain green.
+9. Manual Admin Web happy path passes.
+10. Existing Postman E2E behavior remains valid.
+11. Point-related UI does not present pending values as final policy.
+12. Any deviation from Figma is documented as a workflow-preserving adaptation.
 
 ## Current conclusion
 
-The full redesign is technically possible with the current Laravel Blade stack. Most work is UI/UX implementation, with limited Web Controller/query adjustments. Core backend and REST API changes are not expected for the majority of the redesign. The exact implementation plan remains provisional until the Figma file can be inspected through an account with sufficient access.
+The Figma design is feasible without complex backend changes.
+
+Approved implementation stance:
+
+```text
+Use the Figma as the complete visual direction.
+Use the existing Laravel backend as the complete workflow direction.
+Prefer a small UX deviation over any unnecessary backend behavior change.
+```
