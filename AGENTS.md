@@ -2,71 +2,91 @@
 
 ## Project identity
 
-- Project: Offroad Booking Web App
+- Project: Offroad Booking Platform
 - Repository: `allifiz/offroad-booking-api`
-- Backend/API and web clients: Laravel 13
+- Backend/API and Admin Web: Laravel 13
 - Database: MySQL/MariaDB
 - API authentication: Laravel Sanctum
-- Admin web authentication: Laravel session
-- Driver client: Flutter native
+- Admin authentication: Laravel session
+- Mobile clients: Flutter native for customer and driver
 - Main branch: `main`
 - Local path: `C:\Projects\offroad-booking-api`
 
+## Project phase
+
+**Backend MVP is complete.**
+
+The Laravel REST API, operational Admin Web, automated tests, OpenAPI contract, reports, audit logs, health checks, deployment assets, and core production operations have been implemented. GitHub Actions has been confirmed green for the completed backend codebase.
+
+The next product-development phase is Flutter application development and staging/production infrastructure integration. Do not reopen completed backend scope unless a mobile integration issue, verified defect, security requirement, or approved product change requires it.
+
 ## Mandatory workflow
 
-1. Inspect models, migrations, controllers, routes, tests, queue behavior, deployment scripts, frontend assets, and API documentation before changing behavior.
-2. Apply changes directly to `main`, unless the user requests another branch.
+1. Inspect models, migrations, controllers, routes, tests, shared services, queue behavior, frontend assets, deployment scripts, and `docs/openapi.yaml` before changing backend behavior.
+2. Apply changes directly to `main`, unless the user explicitly requests another branch.
 3. Never expose real secrets or claim tests pass unless CI/runtime confirms them.
-4. Update this file and `PROJECT_PROGRESS.md` after project changes.
-5. Keep `docs/openapi.yaml` synchronized with API endpoint and payload changes.
-6. After backend changes respond in this order: Changes, Endpoint changes, Cara pull changes, cURL Postman, Expected result cURL.
+4. Update this file, `README.md`, and `PROJECT_PROGRESS.md` when project status or architecture materially changes.
+5. Keep `docs/openapi.yaml` synchronized with every API endpoint, payload, enum, authentication, pagination, and error-contract change.
+6. Preserve backward compatibility for Flutter clients unless a versioned breaking change is explicitly approved.
+7. After backend changes, respond in this order: Changes, Endpoint changes, Cara pull changes, cURL Postman, Expected result cURL.
 
-## Implemented system
+## Completed backend scope
 
-- Complete customer, booking, payment, driver, vehicle, assignment, allocation, reward, withdrawal, audit, and notification API flows.
-- Risk-based rate limiting, queued notifications, MySQL concurrency protection, reporting, CSV export, health checks, backup/deploy scripts, and autonomous CI.
-- GitHub Actions jobs: OpenAPI lint, SQLite suite, and MySQL concurrency suite.
+- Customer authentication, profile, package discovery, bookings, participants, payments, travel groups, and notifications.
+- Driver onboarding, document verification, vehicles, assignment offers, participant allocation, trip lifecycle, rewards, point ledger, and withdrawals.
+- Admin dashboard and full operational management for customers, packages, travel groups, bookings, payments, drivers, vehicles, withdrawals, reports, and audit logs.
+- Shared responsive Admin Web layout with desktop sidebar, mobile navigation, active route state, global flash messages, and validation errors.
+- Risk-based rate limiting, queued notifications, concurrency-safe booking and withdrawal operations, idempotent rewards, audit trails, CSV export, health checks, backup/deploy scripts, and automated CI.
+- GitHub Actions jobs for OpenAPI lint, SQLite feature tests, and MySQL concurrency tests.
 
-## Shared services
+## Shared domain services
 
 - `BookingLifecycleService` is canonical for booking transitions, cancellation propagation, row locking, completion rewards, and ledger idempotency.
 - `WithdrawalService` is canonical for withdrawal requests and admin transitions.
-- API and Admin Web must not duplicate booking or withdrawal balance logic.
+- API and Admin Web must not duplicate booking lifecycle, withdrawal balance, reward, or ledger logic.
+- New Flutter requirements must consume existing services through API controllers rather than introducing mobile-specific domain logic.
 
-## Admin web
+## Admin Web rules
 
-- Session authentication, dashboard, payment verification, booking operations, participant allocation, driver/vehicle verification, withdrawal operations, reports, and audit logs are implemented.
-- Session-protected CSV downloads reuse `Api\V1\Admin\ReportExportController`.
-- Guest redirects are configured explicitly through `redirectGuestsTo()` and must resolve to `admin.login`.
-- Root `/` intentionally redirects to `/admin`; tests must assert the redirect instead of expecting a 200 response.
-- Booking list rendering parses `tour_date` defensively and casts decimal totals before formatting.
-- Admin Blade views use Vite assets and therefore CI must build `public/build/manifest.json` before rendering feature tests.
+- All authenticated admin pages use `resources/views/layouts/admin.blade.php` and the shared navigation partial.
+- Guest redirects must resolve to `admin.login` through `redirectGuestsTo()`.
+- Root `/` intentionally redirects to `/admin`.
+- Admin Blade views use Vite assets; feature-test environments must build `public/build/manifest.json` before rendering them.
+- Session-protected CSV downloads reuse the canonical report export implementation.
+- Preserve role authorization: guests redirect to login and authenticated non-admin users receive HTTP 403.
+
+## Flutter integration rules
+
+- Treat `docs/openapi.yaml` as the canonical mobile API contract.
+- Use staging API environments for Flutter development; never point normal development builds at production data.
+- Store Sanctum tokens using secure device storage.
+- Handle revoked tokens, suspended/inactive users, validation errors, pagination, enum values, upload limits, offline failures, retries, and idempotent actions explicitly.
+- Prefer additive backend changes. Breaking response changes require API versioning or an agreed migration plan.
+- Keep customer and driver roles separated at navigation and authorization layers while sharing reusable networking, auth, error, and storage infrastructure.
 
 ## CI requirements
 
 - SQLite feature job uses PHP 8.4 and Node.js 22.
-- Run `npm install --ignore-scripts` followed by `npm run build` before `php artisan test`.
-- The repository currently has no `package-lock.json`, so CI must not use `npm ci` until a lockfile is committed.
+- Run `npm install --ignore-scripts`, then `npm run build`, before `php artisan test` when Blade views are rendered.
+- The repository currently has no `package-lock.json`; do not use `npm ci` until a lockfile is committed.
 - MySQL concurrency tests do not render Blade and do not require a frontend build.
+- Do not merge backend behavior changes unless relevant tests and the full GitHub Actions workflow are green.
 
 ## Production operations
 
-- Queue health: `php artisan queue:health` and `--json`.
-- Application health: `php artisan app:health` and `--json`.
-- Supervisor: `deploy/supervisor/offroad-booking-worker.conf`.
+- Application health: `php artisan app:health` and `php artisan app:health --json`.
+- Queue health: `php artisan queue:health` and `php artisan queue:health --json`.
+- Supervisor config: `deploy/supervisor/offroad-booking-worker.conf`.
 - Deploy script: `deploy/scripts/deploy.sh`.
 - Backup script: `deploy/scripts/backup.sh`.
-- Runbooks: `docs/QUEUE_PRODUCTION.md`, `docs/PRODUCTION_DEPLOYMENT.md`.
+- Runbooks: `docs/QUEUE_PRODUCTION.md` and `docs/PRODUCTION_DEPLOYMENT.md`.
 
-## Verification status
+## Completion status
 
-- The latest SQLite run passed most suites but exposed three web-test regressions: unauthenticated redirect configuration, outdated root-route expectation, and booking list rendering.
-- Fix commits: `f09bc7ce24a784569792e298c51e9917c70b6a58`, `388d7016e8e087fcf728e80a19c4c04d66c9786e`, and `0780d82c251d88bcd568306c77062692103d22c3`.
-- Do not claim the newest workflow passes until GitHub Actions confirms it.
-
-## Next progress list
-
-1. Confirm the rebuilt SQLite suite is green and fix any remaining test failure.
-2. Finish canonical OpenAPI dashboard/CSV/admin schemas.
-3. Start customer web.
-4. Start Flutter driver integration.
+- Backend MVP: **completed**.
+- REST API contract: **completed for MVP**.
+- Admin Web functional scope: **completed**.
+- Shared Admin Web layout: **completed**.
+- Automated backend CI: **green**.
+- Next active phase: **Flutter customer and driver applications**.
+- Separate operational track: staging, production hardening, monitoring, backup verification, and deployment.
