@@ -20,7 +20,9 @@ The Laravel REST API, operational Admin Web, automated tests, OpenAPI contract, 
 
 The documented Postman end-to-end happy path has also been executed manually against the current backend and a real local MySQL/MariaDB database. All documented requests completed successfully and the persisted records remained connected through customer, booking, payment, driver, assignment, completion reward, and withdrawal flows. See `docs/POSTMAN_E2E_VERIFICATION.md`.
 
-The next product-development phase is Flutter application development and staging/production infrastructure integration. Do not reopen completed backend scope unless a mobile integration issue, verified defect, security requirement, or approved product change requires it.
+The next Admin Web track is a full UI/UX enhancement and possible visual redesign based on the referenced Figma design. This work is tracked separately in `docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md` and must not be confused with backend MVP completion.
+
+The next product-development phase is Flutter application development and staging/production infrastructure integration. Do not reopen completed backend scope unless a mobile integration issue, verified defect, security requirement, approved Admin UX requirement, or approved product change requires it.
 
 ## Mandatory workflow
 
@@ -31,7 +33,8 @@ The next product-development phase is Flutter application development and stagin
 5. Keep `docs/openapi.yaml` synchronized with every API endpoint, payload, enum, authentication, pagination, and error-contract change.
 6. Preserve backward compatibility for Flutter clients unless a versioned breaking change is explicitly approved.
 7. Read `docs/POINT_REWARD_DECISION_PENDING.md` before changing assignment, completion reward, point ledger, conversion, or withdrawal behavior.
-8. After backend changes, respond in this order: Changes, Endpoint changes, Cara pull changes, cURL Postman, Expected result cURL.
+8. Read `docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md` before modifying Admin Web layout, navigation, CRUD forms, modals, dashboard, bookings, payments, driver verification, withdrawals, reports, or audit-log UX.
+9. After backend changes, respond in this order: Changes, Endpoint changes, Cara pull changes, cURL Postman, Expected result cURL.
 
 ## Completed backend scope
 
@@ -59,6 +62,17 @@ The next product-development phase is Flutter application development and stagin
 - Preserve current behavior until an explicit product decision is approved.
 - Canonical pending-decision note: `docs/POINT_REWARD_DECISION_PENDING.md`.
 
+## Admin UI/UX enhancement status
+
+- Canonical progress document: `docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md`.
+- Current Admin Web functionality is complete, but UX clarity and the full visual system are planned for enhancement.
+- Proposed target Figma file: `Admin-WOG`, node `1627:37733`.
+- The Figma connector could not inspect the design because the connected account lacks editor access; implementation details remain provisional until access is granted.
+- The redesign is expected to be feasible using Blade, Tailwind, Alpine.js/lightweight JavaScript, and the existing Web Admin routes.
+- Most redesign work should not change core API or domain behavior.
+- Possible backend work must be explicitly approved and is limited to needs such as bulk participant allocation, AJAX search, protected preview, richer dashboard data, persisted financial references, or other contracts documented in the progress file.
+- Do not implement a fixed reward display in assignment UI while the point policy is pending.
+
 ## Shared domain services
 
 - `BookingLifecycleService` is canonical for booking transitions, cancellation propagation, row locking, completion rewards, and ledger idempotency.
@@ -68,12 +82,15 @@ The next product-development phase is Flutter application development and stagin
 
 ## Admin Web rules
 
-- All authenticated admin pages use `resources/views/layouts/admin.blade.php` and the shared navigation partial.
+- All authenticated admin pages use `resources/views/layouts/admin.blade.php` and the shared navigation partial until the final Figma-based layout is implemented.
 - Guest redirects must resolve to `admin.login` through `redirectGuestsTo()`.
 - Root `/` intentionally redirects to `/admin`.
 - Admin Blade views use Vite assets; feature-test environments must build `public/build/manifest.json` before rendering them.
 - Session-protected CSV downloads reuse the canonical report export implementation.
 - Preserve role authorization: guests redirect to login and authenticated non-admin users receive HTTP 403.
+- Keep domain validation server-side when adding modals or JavaScript interactions.
+- Modal validation failures must preserve input and reopen the correct modal.
+- Destructive and financial actions require explicit confirmation.
 
 ## Flutter integration rules
 
@@ -107,11 +124,13 @@ The next product-development phase is Flutter application development and stagin
 - Backend MVP: **completed**.
 - REST API contract: **completed for MVP**.
 - Admin Web functional scope: **completed**.
-- Shared Admin Web layout: **completed**.
+- Current shared Admin Web layout: **completed baseline**.
+- Admin UI/UX enhancement: **planned**.
+- Figma target inspection: **blocked pending editor access**.
 - Automated backend CI: **green**.
 - Manual Postman E2E happy path: **passed**.
 - Database relationship continuity: **verified**.
 - Point implementation: **technically passed**.
 - Point product policy: **pending decision**.
-- Next active phase: **Flutter customer and driver applications**.
-- Separate operational track: staging, production hardening, monitoring, backup verification, and deployment.
+- Next active product phase: **Flutter customer and driver applications**.
+- Parallel tracks: **Admin UI/UX enhancement** and **staging/production hardening**.
