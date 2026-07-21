@@ -1,16 +1,10 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Customers · Admin</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
-<main class="mx-auto max-w-7xl p-5 sm:p-8">
+@extends('layouts.admin')
+
+@section('title', 'Customers')
+
+@section('content')
     <div>
-        <a href="{{ route('admin.dashboard') }}" class="text-sm font-bold text-amber-700">← Dashboard</a>
-        <p class="mt-4 text-xs font-bold uppercase tracking-[.2em] text-amber-600">User management</p>
+        <p class="text-xs font-bold uppercase tracking-[.2em] text-amber-600">User management</p>
         <h1 class="mt-2 text-3xl font-black">Customers</h1>
         <p class="mt-2 text-slate-600">Lihat riwayat transaksi dan kelola status akun customer.</p>
     </div>
@@ -50,6 +44,4 @@
         </div>
         <div class="border-t px-5 py-4">{{ $customers->links() }}</div>
     </div>
-</main>
-</body>
-</html>
+@endsection
