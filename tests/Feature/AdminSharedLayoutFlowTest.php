@@ -69,20 +69,35 @@ class AdminSharedLayoutFlowTest extends TestCase
             ->assertSee('Simpan travel group');
     }
 
+    public function test_booking_and_payment_indexes_render_shared_navigation(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin/bookings')
+            ->assertOk()
+            ->assertSee('Admin Panel')
+            ->assertSee('Bookings')
+            ->assertSee('Belum ada booking.')
+            ->assertSee('Menu');
+
+        $this->actingAs($admin)
+            ->get('/admin/payments')
+            ->assertOk()
+            ->assertSee('Admin Panel')
+            ->assertSee('Verifikasi pembayaran')
+            ->assertSee('Tidak ada pembayaran.')
+            ->assertSee('Menu');
+    }
+
     public function test_non_admin_still_cannot_render_shared_admin_pages(): void
     {
         $customer = User::factory()->customer()->create();
 
-        $this->actingAs($customer)
-            ->get('/admin/customers')
-            ->assertForbidden();
-
-        $this->actingAs($customer)
-            ->get('/admin/vehicles')
-            ->assertForbidden();
-
-        $this->actingAs($customer)
-            ->get('/admin/travel-groups')
-            ->assertForbidden();
+        foreach (['/admin/customers', '/admin/vehicles', '/admin/travel-groups', '/admin/bookings', '/admin/payments'] as $path) {
+            $this->actingAs($customer)
+                ->get($path)
+                ->assertForbidden();
+        }
     }
 }
