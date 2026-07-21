@@ -15,9 +15,14 @@
         </div>
         <nav class="mt-8 grid grid-cols-2 gap-2 text-sm lg:grid-cols-1">
             <a href="{{ route('admin.dashboard') }}" class="rounded-xl bg-amber-500 px-4 py-3 font-bold text-slate-950">Dashboard</a>
-            <span class="rounded-xl px-4 py-3 text-slate-500">Bookings</span>
+            <a href="{{ route('admin.tour-packages.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Paket Wisata</a>
+            <a href="{{ route('admin.bookings.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Bookings</a>
             <a href="{{ route('admin.payments.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Payments</a>
-            <span class="rounded-xl px-4 py-3 text-slate-500">Drivers</span><span class="rounded-xl px-4 py-3 text-slate-500">Vehicles</span><span class="rounded-xl px-4 py-3 text-slate-500">Withdrawals</span><span class="rounded-xl px-4 py-3 text-slate-500">Audit Logs</span>
+            <a href="{{ route('admin.drivers.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Drivers</a>
+            <a href="{{ route('admin.vehicles.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Vehicles</a>
+            <a href="{{ route('admin.withdrawals.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Withdrawals</a>
+            <a href="{{ route('admin.reports.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Reports</a>
+            <a href="{{ route('admin.audit-logs.index') }}" class="rounded-xl px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white">Audit Logs</a>
         </nav>
         <div class="mt-10 hidden border-t border-white/10 pt-6 lg:block"><p class="truncate text-sm font-semibold">{{ auth()->user()->name }}</p><p class="truncate text-xs text-slate-500">{{ auth()->user()->email }}</p><form method="POST" action="{{ route('admin.logout') }}" class="mt-4">@csrf<button class="text-sm font-medium text-slate-400 hover:text-white">Keluar</button></form></div>
     </aside>
