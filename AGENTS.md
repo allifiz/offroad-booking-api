@@ -20,9 +20,44 @@ The Laravel REST API, operational Admin Web, automated tests, OpenAPI contract, 
 
 The documented Postman end-to-end happy path has also been executed manually against the current backend and a real local MySQL/MariaDB database. All documented requests completed successfully and the persisted records remained connected through customer, booking, payment, driver, assignment, completion reward, and withdrawal flows. See `docs/POSTMAN_E2E_VERIFICATION.md`.
 
-The next Admin Web track is a full UI/UX enhancement and possible visual redesign based on the referenced Figma design. This work is tracked separately in `docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md` and must not be confused with backend MVP completion.
+The next Admin Web track is a full UI/UX enhancement based on the accessible Figma reference. This work is tracked separately in `docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md` and must not be confused with backend MVP completion.
 
-The next product-development phase is Flutter application development and staging/production infrastructure integration. Do not reopen completed backend scope unless a mobile integration issue, verified defect, security requirement, approved Admin UX requirement, or approved product change requires it.
+The next product-development phase is Flutter application development and staging/production infrastructure integration. Do not reopen completed backend scope unless a mobile integration issue, verified defect, security requirement, explicitly approved Admin UX requirement, or approved product change requires it.
+
+## Resume protocol for a new AI agent
+
+When continuing this repository without prior chat context, do not ask the user to restate previous decisions. Perform this sequence first:
+
+1. Read `AGENTS.md` completely.
+2. Read `PROJECT_PROGRESS.md` for the overall project checkpoint.
+3. Read `docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md` before doing any Admin Web redesign work.
+4. Read `docs/POINT_REWARD_DECISION_PENDING.md` before touching assignment, completion reward, point ledger, conversion, reporting, or withdrawal behavior.
+5. Inspect the current implementation files for the module being changed; documentation is guidance, while repository code is the implementation source.
+6. Continue from the first incomplete item or phase in the canonical progress document unless the user explicitly selects another module.
+7. Update the relevant progress status after each completed implementation slice, including changed files, completed behavior, remaining work, and verification performed.
+8. Do not infer that a planned item is implemented merely because it appears in Figma or documentation.
+
+Current Admin UI/UX continuation point:
+
+```text
+Track: Admin UI/UX enhancement
+Canonical progress: docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md
+Figma access: available
+Figma initial review: completed
+Implementation: not started
+First implementation phase: Global UI foundation
+First practical slice: login + shared admin shell + reusable UI primitives
+Backend workflow changes: prohibited for this track unless separately approved
+```
+
+Canonical design principle:
+
+```text
+Figma = visual reference and interaction pattern
+Existing backend = workflow and business-rule source of truth
+```
+
+When Figma and existing backend behavior differ, adapt the UI rather than modifying accepted backend logic. A small UX difference is preferred over a domain, schema, API, lifecycle, payment, assignment, withdrawal, or point-policy change.
 
 ## Mandatory workflow
 
@@ -65,12 +100,15 @@ The next product-development phase is Flutter application development and stagin
 ## Admin UI/UX enhancement status
 
 - Canonical progress document: `docs/ADMIN_UI_UX_ENHANCEMENT_PROGRESS.md`.
-- Current Admin Web functionality is complete, but UX clarity and the full visual system are planned for enhancement.
-- Proposed target Figma file: `Admin-WOG`, node `1627:37733`.
-- The Figma connector could not inspect the design because the connected account lacks editor access; implementation details remain provisional until access is granted.
-- The redesign is expected to be feasible using Blade, Tailwind, Alpine.js/lightweight JavaScript, and the existing Web Admin routes.
-- Most redesign work should not change core API or domain behavior.
-- Possible backend work must be explicitly approved and is limited to needs such as bulk participant allocation, AJAX search, protected preview, richer dashboard data, persisted financial references, or other contracts documented in the progress file.
+- Current Admin Web functionality is complete, but UX clarity and the visual system are planned for enhancement.
+- Accessible target Figma: `https://www.figma.com/design/LsmerjTpUvpqRP8awPLg7q/Untitled?node-id=0-1&t=7aiBXytLVCxesQki-1`.
+- Figma file key: `LsmerjTpUvpqRP8awPLg7q`; page root: `0:1`.
+- Reviewed Figma nodes include Dashboard `1:4414`, Cari Driver `1:4508`, Orderan `1:4968`, Paket Offroad `1:5028`, Detail Pesanan `1:5089`, Pengaturan `1:5152`, Data Mitra `1:5197`, Login `1:5358`, and Success popup `1:5346`.
+- The redesign is feasible using Blade, Tailwind, Alpine.js/lightweight JavaScript, Vite, and existing Web Admin routes.
+- Most redesign work must not change core API or domain behavior.
+- `Driver Online` means the existing `availability_status = available`; it does not mean real-time presence, heartbeat, GPS, Redis, or WebSocket.
+- Calendar views are read-only projections of existing booking dates and statuses; no drag-and-drop rescheduling.
+- Figma-only behavior must not create new product functionality such as bulk mutations, admin-created driver onboarding, new lifecycle states, or new financial rules.
 - Do not implement a fixed reward display in assignment UI while the point policy is pending.
 
 ## Shared domain services
@@ -82,7 +120,7 @@ The next product-development phase is Flutter application development and stagin
 
 ## Admin Web rules
 
-- All authenticated admin pages use `resources/views/layouts/admin.blade.php` and the shared navigation partial until the final Figma-based layout is implemented.
+- All authenticated admin pages use `resources/views/layouts/admin.blade.php` and the shared navigation partial until the Figma-based shell replaces them.
 - Guest redirects must resolve to `admin.login` through `redirectGuestsTo()`.
 - Root `/` intentionally redirects to `/admin`.
 - Admin Blade views use Vite assets; feature-test environments must build `public/build/manifest.json` before rendering them.
@@ -91,6 +129,8 @@ The next product-development phase is Flutter application development and stagin
 - Keep domain validation server-side when adding modals or JavaScript interactions.
 - Modal validation failures must preserve input and reopen the correct modal.
 - Destructive and financial actions require explicit confirmation.
+- Prefer reusable Blade components and partials over duplicating modal, table, badge, button, form, and feedback markup.
+- Preserve existing full-page URLs as fallbacks where practical even when primary CRUD interaction moves into modals.
 
 ## Flutter integration rules
 
@@ -126,7 +166,10 @@ The next product-development phase is Flutter application development and stagin
 - Admin Web functional scope: **completed**.
 - Current shared Admin Web layout: **completed baseline**.
 - Admin UI/UX enhancement: **planned**.
-- Figma target inspection: **blocked pending editor access**.
+- Figma access: **available**.
+- Figma initial review: **completed**.
+- Admin UI/UX implementation: **not started**.
+- Next Admin UI/UX phase: **Global UI foundation**.
 - Automated backend CI: **green**.
 - Manual Postman E2E happy path: **passed**.
 - Database relationship continuity: **verified**.
