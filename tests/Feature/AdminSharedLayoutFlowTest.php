@@ -19,39 +19,45 @@ class AdminSharedLayoutFlowTest extends TestCase
         $this->actingAs($admin)->get("/admin/customers/{$customer->id}")->assertOk()->assertSee($customer->name)->assertSee('Simpan status');
     }
 
-    public function test_vehicle_pages_render_shared_navigation(): void
+    public function test_master_and_operational_indexes_render_shared_navigation(): void
     {
         $admin = User::factory()->admin()->create();
-        $this->actingAs($admin)->get('/admin/vehicles')->assertOk()->assertSee('Admin Panel')->assertSee('Kendaraan')->assertSee('Tambah kendaraan')->assertSee('Menu');
-        $this->actingAs($admin)->get('/admin/vehicles/create')->assertOk()->assertSee('Tambah kendaraan')->assertSee('Simpan kendaraan');
+
+        foreach ([
+            ['/admin/vehicles', 'Kendaraan'],
+            ['/admin/travel-groups', 'Travel Groups'],
+            ['/admin/bookings', 'Bookings'],
+            ['/admin/payments', 'Verifikasi pembayaran'],
+            ['/admin/drivers', 'Driver Verification'],
+            ['/admin/withdrawals', 'Withdrawal Queue'],
+        ] as [$path, $text]) {
+            $this->actingAs($admin)->get($path)->assertOk()->assertSee('Admin Panel')->assertSee($text)->assertSee('Menu');
+        }
     }
 
-    public function test_travel_group_pages_render_shared_navigation(): void
+    public function test_reports_audit_logs_and_dashboard_render_shared_navigation(): void
     {
         $admin = User::factory()->admin()->create();
-        $this->actingAs($admin)->get('/admin/travel-groups')->assertOk()->assertSee('Admin Panel')->assertSee('Travel Groups')->assertSee('Buat group')->assertSee('Menu');
-        $this->actingAs($admin)->get('/admin/travel-groups/create')->assertOk()->assertSee('Buat travel group')->assertSee('Simpan travel group');
+
+        $this->actingAs($admin)->get('/admin/reports')->assertOk()->assertSee('Admin Panel')->assertSee('Export laporan CSV')->assertSee('Download CSV')->assertSee('Menu');
+        $this->actingAs($admin)->get('/admin/audit-logs')->assertOk()->assertSee('Admin Panel')->assertSee('Audit Logs')->assertSee('Belum ada audit log.')->assertSee('Menu');
+        $this->actingAs($admin)->get('/admin')->assertOk()->assertSee('Admin Panel')->assertSee('Dashboard')->assertSee('Booking terbaru')->assertSee('Reporting center')->assertSee('Menu');
     }
 
-    public function test_booking_and_payment_indexes_render_shared_navigation(): void
+    public function test_create_pages_keep_shared_navigation(): void
     {
         $admin = User::factory()->admin()->create();
-        $this->actingAs($admin)->get('/admin/bookings')->assertOk()->assertSee('Admin Panel')->assertSee('Bookings')->assertSee('Belum ada booking.')->assertSee('Menu');
-        $this->actingAs($admin)->get('/admin/payments')->assertOk()->assertSee('Admin Panel')->assertSee('Verifikasi pembayaran')->assertSee('Tidak ada pembayaran.')->assertSee('Menu');
-    }
 
-    public function test_driver_and_withdrawal_indexes_render_shared_navigation(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $this->actingAs($admin)->get('/admin/drivers')->assertOk()->assertSee('Admin Panel')->assertSee('Driver Verification')->assertSee('Tidak ada data driver.')->assertSee('Menu');
-        $this->actingAs($admin)->get('/admin/withdrawals')->assertOk()->assertSee('Admin Panel')->assertSee('Withdrawal Queue')->assertSee('Belum ada withdrawal.')->assertSee('Menu');
+        $this->actingAs($admin)->get('/admin/vehicles/create')->assertOk()->assertSee('Admin Panel')->assertSee('Simpan kendaraan');
+        $this->actingAs($admin)->get('/admin/travel-groups/create')->assertOk()->assertSee('Admin Panel')->assertSee('Simpan travel group');
+        $this->actingAs($admin)->get('/admin/tour-packages/create')->assertOk()->assertSee('Admin Panel')->assertSee('Simpan paket');
     }
 
     public function test_non_admin_still_cannot_render_shared_admin_pages(): void
     {
         $customer = User::factory()->customer()->create();
 
-        foreach (['/admin/customers', '/admin/vehicles', '/admin/travel-groups', '/admin/bookings', '/admin/payments', '/admin/drivers', '/admin/withdrawals'] as $path) {
+        foreach (['/admin', '/admin/customers', '/admin/tour-packages', '/admin/vehicles', '/admin/travel-groups', '/admin/bookings', '/admin/payments', '/admin/drivers', '/admin/withdrawals', '/admin/reports', '/admin/audit-logs'] as $path) {
             $this->actingAs($customer)->get($path)->assertForbidden();
         }
     }
