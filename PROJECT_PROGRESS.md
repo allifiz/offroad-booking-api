@@ -21,10 +21,74 @@ Local path: `C:\Projects\offroad-booking-api`
 | MySQL concurrency coverage | Complete |
 | OpenAPI lint | Green |
 | GitHub Actions backend workflow | Green |
+| Manual Postman E2E happy path | Passed |
+| Real database relationship continuity | Verified |
+| Point implementation | Technically passed |
+| Point product policy | Pending decision |
 | Flutter integration readiness | Ready to start |
-| Driver point reward policy | Pending product decision; MVP placeholder active |
 
 The backend feature-development phase is closed. Further backend work should be limited to verified defects, Flutter integration requirements, security hardening, infrastructure integration, or explicitly approved product changes.
+
+## Manual Postman E2E acceptance
+
+Test definition:
+
+```text
+docs/POSTMAN_END_TO_END_TEST.md
+```
+
+Verification record:
+
+```text
+docs/POSTMAN_E2E_VERIFICATION.md
+```
+
+The complete documented flow was executed manually against the current Laravel backend and a real local MySQL/MariaDB database. All requests completed successfully without backend errors.
+
+The same response IDs and tokens were reused from the beginning to the end, verifying the persisted relationship chain:
+
+```text
+admin -> tour package
+customer -> booking -> participants
+booking -> payment -> admin verification
+booking -> driver assignment -> driver -> vehicle
+driver acceptance -> ongoing trip -> completed trip
+completed trip -> point ledger -> driver balance
+driver balance -> withdrawal -> admin processing
+```
+
+This manual acceptance supplements the green automated CI and confirms that the current happy path behaves as expected through Postman before Flutter integration.
+
+## Point-policy exception
+
+The reward and withdrawal mechanics were technically exercised successfully during the Postman flow:
+
+```text
+completed booking
+-> 100 points credited
+-> ledger record created
+-> withdrawal requested
+-> withdrawal processed
+```
+
+However, this result does **not** approve the current point values or UX as the final product policy.
+
+Temporary MVP behavior still under discussion:
+
+```text
+100 points per completed trip
+Rp1,000 per point
+100-point minimum withdrawal
+no estimated reward shown before assignment acceptance
+```
+
+Canonical pending-decision document:
+
+```text
+docs/POINT_REWARD_DECISION_PENDING.md
+```
+
+Any agent working on assignment, booking completion, reward, point ledger, conversion, reporting, or withdrawal behavior must read that document first. Flutter must not hardcode the current point values.
 
 ## Completed customer scope
 
@@ -46,69 +110,6 @@ The backend feature-development phase is closed. Further backend work should be 
 - Trip completion and idempotent driver rewards.
 - Point ledger, balance protection, and withdrawal lifecycle.
 - Concurrency-safe balance and booking operations.
-
-## Pending product decision: driver point rewards
-
-Canonical decision note:
-
-```text
-docs/POINT_REWARD_DECISION_PENDING.md
-```
-
-The current point implementation is operational for MVP testing but is **not the final incentive policy**.
-
-Current temporary defaults:
-
-```text
-Completed trip reward   = 100 points
-Rupiah per point        = Rp1.000
-Minimum withdrawal      = 100 points
-```
-
-Current behavior:
-
-- reward is a fixed amount for every completed trip;
-- reward is issued only when a booking transitions to `completed`;
-- assignment offers do not expose estimated reward points or nominal rupiah value;
-- drivers cannot see a point estimate before accepting an assignment;
-- no reward quote or snapshot is currently stored on the assignment;
-- reward does not vary by package, distance, duration, participants, vehicle, or another business factor.
-
-The project owner has not yet approved the final formula, award timing, visibility before acceptance, guarantee level, conversion rate, withdrawal threshold, override behavior, or cancellation/reversal rules.
-
-Until that decision exists:
-
-- preserve current backend behavior;
-- do not treat `100`, `1000`, or `100` as permanent business constants;
-- do not duplicate these values in Flutter;
-- do not show a promised reward on an assignment card;
-- use existing point summary and ledger endpoints only for earned balances;
-- read `docs/POINT_REWARD_DECISION_PENDING.md` before modifying assignment, completion, ledger, or withdrawal behavior.
-
-Endpoint groups likely affected by a future change:
-
-```text
-POST  /api/v1/admin/bookings/{booking}/driver-assignments
-GET   /api/v1/driver/assignments
-GET   /api/v1/driver/assignments/{driverAssignment}
-PATCH /api/v1/driver/assignments/{driverAssignment}/accept
-PATCH /api/v1/driver/assignments/{driverAssignment}/reject
-PATCH /api/v1/admin/bookings/{booking}/status
-GET   /api/v1/driver/points/summary
-GET   /api/v1/driver/points/ledger
-GET   /api/v1/driver/withdrawals
-POST  /api/v1/driver/withdrawals
-GET   /api/v1/admin/withdrawals
-GET   /api/v1/admin/withdrawals/{withdrawal}
-PATCH /api/v1/admin/withdrawals/{withdrawal}
-GET   /api/v1/admin/dashboard
-GET   /api/v1/admin/reports/export/drivers
-GET   /api/v1/admin/reports/export/withdrawals
-GET   /api/v1/admin/audit-logs
-GET   /api/v1/admin/audit-logs/{auditLog}
-```
-
-The detailed rationale for each endpoint, historical snapshot requirements, OpenAPI changes, migration/backfill concerns, idempotency requirements, and Flutter wording rules is documented in the canonical decision note.
 
 ## Completed Admin Web scope
 
@@ -209,7 +210,6 @@ These items do not block Flutter development, but must be completed before publi
 5. Perform and document a restore test.
 6. Run migration dry runs, production smoke tests, and rollback drills.
 7. Review upload security, rate limits, session cookies, CORS, and sensitive audit data.
-8. Finalize the driver reward and point-conversion product policy before presenting assignment earnings as guaranteed values.
 
 ## Flutter handoff
 
@@ -228,7 +228,7 @@ go_router
 Recommended first customer milestone:
 
 1. Environment and API client setup.
-2. Login, registration, token refresh/revocation handling, and logout.
+2. Login, registration, token revocation handling, and logout.
 3. Package list and package detail.
 4. Booking creation and booking history.
 5. Booking detail and payment proof upload.
@@ -239,19 +239,17 @@ Recommended driver milestone:
 2. Vehicle management.
 3. Assignment offer list and response.
 4. Trip status workflow.
-5. Point balance and withdrawal request.
+5. Point balance and withdrawal request, without hardcoding pending reward-policy values.
 
 Flutter development should use a staging API and must not rely on production data.
-
-For rewards, Flutter must not hardcode the current point values or show a promised assignment reward. It should consume an approved future API reward contract after the pending product decision is finalized.
 
 ## Next active phase
 
 ```text
 Primary: Flutter customer and driver applications
 Parallel: staging and production hardening
-Pending product decision: driver reward/point policy
 Backend feature phase: closed
+Point policy: pending product decision
 ```
 
 ## Response format rule
