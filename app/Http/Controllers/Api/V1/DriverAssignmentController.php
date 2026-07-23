@@ -9,6 +9,7 @@ use App\Enums\VehicleStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DriverAssignment;
+use App\Services\BookingLifecycleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DriverAssignmentController extends Controller
 {
+    public function __construct(private readonly BookingLifecycleService $bookingLifecycle) {}
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -145,6 +148,28 @@ class DriverAssignmentController extends Controller
         ]);
     }
 
+    public function startTrip(Request $request, DriverAssignment $driverAssignment): JsonResponse
+    {
+        $this->ensureOwnedAcceptedAssignment($request, $driverAssignment);
+        $this->bookingLifecycle->transition($driverAssignment->booking, BookingStatus::ONGOING);
+
+        return $this->tripResponse(
+            $driverAssignment,
+            'Perjalanan berhasil dimulai.',
+        );
+    }
+
+    public function completeTrip(Request $request, DriverAssignment $driverAssignment): JsonResponse
+    {
+        $this->ensureOwnedAcceptedAssignment($request, $driverAssignment);
+        $this->bookingLifecycle->transition($driverAssignment->booking, BookingStatus::COMPLETED);
+
+        return $this->tripResponse(
+            $driverAssignment,
+            'Perjalanan berhasil diselesaikan.',
+        );
+    }
+
     private function ensureOwnership(Request $request, DriverAssignment $driverAssignment): void
     {
         abort_unless($driverAssignment->driver_id === $request->user()->id, Response::HTTP_NOT_FOUND);
@@ -157,5 +182,31 @@ class DriverAssignmentController extends Controller
                 'assignment' => ['Hanya assignment offered yang dapat direspons.'],
             ]);
         }
+    }
+
+    private function ensureOwnedAcceptedAssignment(Request $request, DriverAssignment $driverAssignment): void
+    {
+        $this->ensureOwnership($request, $driverAssignment);
+
+        if ($driverAssignment->status !== DriverAssignmentStatus::ACCEPTED) {
+            throw ValidationException::withMessages([
+                'assignment' => ['Hanya assignment accepted yang dapat mengubah status perjalanan.'],
+            ]);
+        }
+    }
+
+    private function tripResponse(DriverAssignment $driverAssignment, string $message): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $driverAssignment->refresh()->load([
+                'booking.customer',
+                'booking.tourPackage',
+                'booking.participants',
+                'vehicle',
+                'offeredBy',
+            ]),
+        ]);
     }
 }

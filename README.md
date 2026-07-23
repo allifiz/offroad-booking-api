@@ -4,7 +4,7 @@ Backend dan Web Admin untuk platform pemesanan wisata offroad.
 
 ## Project Status
 
-> **BACKEND MVP: COMPLETED ✅**
+> **BACKEND MVP: COMPLETED ?**
 
 Status per tahap:
 
@@ -26,6 +26,31 @@ Status per tahap:
 
 Backend telah dinyatakan selesai untuk cakupan MVP dan siap digunakan sebagai fondasi pengembangan aplikasi Flutter.
 
+## Mobile integration updates
+
+Tambahan terbaru untuk sinkronisasi dengan Flutter mobile:
+
+- driver assignment yang baru dibuat tetap memakai notifikasi database Laravel
+- assignment offered untuk driver juga mengirim push notification FCM
+- token device driver disimpan di tabel `driver_device_tokens`
+- endpoint driver untuk token push:
+  - `POST /api/v1/driver/device-tokens`
+  - `DELETE /api/v1/driver/device-tokens`
+- driver bisa memulai dan menyelesaikan trip lewat:
+  - `PATCH /api/v1/driver/assignments/{driverAssignment}/start-trip`
+  - `PATCH /api/v1/driver/assignments/{driverAssignment}/complete-trip`
+
+## FCM setup
+
+Tambahkan ke `.env`:
+
+```env
+FCM_PROJECT_ID=offroad-bc692
+FCM_CREDENTIALS_PATH=D:/DOWNLOAD/offroad-bc692-firebase-adminsdk-fbsvc-39e7d3fe27.json
+```
+
+Gunakan service account JSON dari Firebase Admin SDK, bukan `google-services.json`.
+
 ## Main Modules
 
 - Customer authentication and profile
@@ -39,6 +64,7 @@ Backend telah dinyatakan selesai untuk cakupan MVP dan siap digunakan sebagai fo
 - Driver points and withdrawal processing
 - Admin dashboard and operational management
 - CSV reports and audit logs
+- FCM push notification delivery for assigned drivers
 
 ## Technology
 
@@ -60,6 +86,7 @@ php artisan migrate --seed
 php artisan storage:link
 npm run build
 php artisan serve
+php artisan queue:work --queue=notifications
 ```
 
 Run tests:

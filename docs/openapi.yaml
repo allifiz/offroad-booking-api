@@ -297,6 +297,120 @@ paths:
         '200': { $ref: '#/components/responses/Success' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /driver/assignments:
+    get:
+      tags: [Driver]
+      summary: Daftar assignment milik driver aktif
+      operationId: listDriverAssignments
+      parameters:
+        - $ref: '#/components/parameters/PerPage'
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [offered, accepted, rejected, cancelled]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/assignments/{driverAssignment}:
+    get:
+      tags: [Driver]
+      summary: Detail assignment milik driver aktif
+      operationId: showDriverAssignment
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /driver/assignments/{driverAssignment}/accept:
+    patch:
+      tags: [Driver]
+      summary: Terima assignment yang ditawarkan
+      operationId: acceptDriverAssignment
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/assignments/{driverAssignment}/reject:
+    patch:
+      tags: [Driver]
+      summary: Tolak assignment yang ditawarkan
+      operationId: rejectDriverAssignment
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rejection_reason]
+              properties:
+                rejection_reason: { type: string, maxLength: 1000 }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/assignments/{driverAssignment}/start-trip:
+    patch:
+      tags: [Driver]
+      summary: Mulai perjalanan dari assignment yang diterima
+      description: Mengubah booking berstatus confirmed menjadi ongoing.
+      operationId: startDriverTrip
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/assignments/{driverAssignment}/complete-trip:
+    patch:
+      tags: [Driver]
+      summary: Selesaikan perjalanan yang sedang berjalan
+      description: Mengubah booking berstatus ongoing menjadi completed dan menjalankan pemberian reward backend.
+      operationId: completeDriverTrip
+      parameters:
+        - $ref: '#/components/parameters/DriverAssignmentId'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /driver/device-tokens:
+    post:
+      tags: [Driver]
+      summary: Daftarkan token push notification driver
+      operationId: registerDriverDeviceToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceTokenRequest'
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Driver]
+      summary: Hapus token push notification driver
+      operationId: deleteDriverDeviceToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, maxLength: 4096 }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /driver/withdrawals:
     get:
       tags: [Driver]
@@ -378,6 +492,11 @@ components:
       name: vehicle
       required: true
       schema: { type: integer }
+    DriverAssignmentId:
+      in: path
+      name: driverAssignment
+      required: true
+      schema: { type: integer }
     NotificationId:
       in: path
       name: notification
@@ -422,16 +541,22 @@ components:
         year: { type: integer }
         capacity: { type: integer, minimum: 1 }
         notes: { type: string, nullable: true }
-    WithdrawalRequest:
-      type: object
-      required: [points, bank_name, account_number, account_name]
-      properties:
-        points: { type: integer, minimum: 100 }
-        bank_name: { type: string }
-        account_number: { type: string }
-        account_name: { type: string }
-    SuccessEnvelope:
-      type: object
+      WithdrawalRequest:
+        type: object
+        required: [points, bank_name, account_number, account_name]
+        properties:
+          points: { type: integer, minimum: 100 }
+          bank_name: { type: string }
+          account_number: { type: string }
+          account_name: { type: string }
+      DeviceTokenRequest:
+        type: object
+        required: [token, platform]
+        properties:
+          token: { type: string, maxLength: 4096 }
+          platform: { type: string, enum: [android, ios] }
+      SuccessEnvelope:
+        type: object
       required: [success]
       properties:
         success: { type: boolean, example: true }

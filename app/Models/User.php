@@ -45,4 +45,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Payment::class, 'customer_id');
     }
+
+    public function driverDeviceTokens(): HasMany
+    {
+        return $this->hasMany(DriverDeviceToken::class);
+    }
 }

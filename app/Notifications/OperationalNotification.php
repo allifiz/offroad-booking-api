@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Channels\FcmChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -35,7 +36,9 @@ class OperationalNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return $this->event === 'assignment.offered'
+            ? ['database', FcmChannel::class]
+            : ['database'];
     }
 
     public function toArray(object $notifiable): array

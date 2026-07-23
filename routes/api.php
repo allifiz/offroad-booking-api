@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\CustomerProfileController;
 use App\Http\Controllers\Api\V1\CustomerRegistrationController;
 use App\Http\Controllers\Api\V1\DriverAssignmentController as DriverAssignmentResponseController;
+use App\Http\Controllers\Api\V1\DriverDeviceTokenController;
 use App\Http\Controllers\Api\V1\DriverDashboardController;
 use App\Http\Controllers\Api\V1\DriverDocumentController;
 use App\Http\Controllers\Api\V1\DriverPointController;
@@ -98,6 +99,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/assignments/{driverAssignment}', [DriverAssignmentResponseController::class, 'show'])->middleware('throttle:authenticated-read');
             Route::patch('/assignments/{driverAssignment}/accept', [DriverAssignmentResponseController::class, 'accept'])->middleware('throttle:driver-write');
             Route::patch('/assignments/{driverAssignment}/reject', [DriverAssignmentResponseController::class, 'reject'])->middleware('throttle:driver-write');
+            Route::patch('/assignments/{driverAssignment}/start-trip', [DriverAssignmentResponseController::class, 'startTrip'])->middleware('throttle:driver-write');
+            Route::patch('/assignments/{driverAssignment}/complete-trip', [DriverAssignmentResponseController::class, 'completeTrip'])->middleware('throttle:driver-write');
+            Route::post('/device-tokens', [DriverDeviceTokenController::class, 'store'])->middleware('throttle:driver-write');
+            Route::delete('/device-tokens', [DriverDeviceTokenController::class, 'destroy'])->middleware('throttle:driver-write');
             Route::get('/points/summary', [DriverPointController::class, 'summary'])->middleware('throttle:authenticated-read');
             Route::get('/points/ledger', [DriverPointController::class, 'ledger'])->middleware('throttle:authenticated-read');
             Route::get('/withdrawals', [DriverPointController::class, 'withdrawals'])->middleware('throttle:authenticated-read');

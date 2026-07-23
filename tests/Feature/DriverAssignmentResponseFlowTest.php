@@ -140,6 +140,57 @@ class DriverAssignmentResponseFlowTest extends TestCase
             ->assertJsonPath('data.status', DriverAssignmentStatus::ACCEPTED->value);
     }
 
+    public function test_driver_can_start_and_complete_an_accepted_trip(): void
+    {
+        [$driver, , $vehicle] = $this->createApprovedAvailableDriverWithVehicle();
+        $booking = $this->createBooking(now()->addMonth()->toDateString());
+        $booking->update([
+            'status' => BookingStatus::CONFIRMED,
+            'payment_status' => PaymentStatus::PAID,
+        ]);
+        $assignment = $this->createAssignment(
+            $booking,
+            $driver,
+            $vehicle,
+            DriverAssignmentStatus::ACCEPTED,
+        );
+
+        Sanctum::actingAs($driver);
+
+        $this->patchJson("/api/v1/driver/assignments/{$assignment->id}/start-trip")
+            ->assertOk()
+            ->assertJsonPath('data.booking.status', BookingStatus::ONGOING->value);
+
+        $this->patchJson("/api/v1/driver/assignments/{$assignment->id}/complete-trip")
+            ->assertOk()
+            ->assertJsonPath('data.booking.status', BookingStatus::COMPLETED->value);
+
+        $this->assertSame(BookingStatus::COMPLETED, $booking->fresh()->status);
+    }
+
+    public function test_driver_trip_transitions_require_ownership_and_an_accepted_assignment(): void
+    {
+        [$owner, , $vehicle] = $this->createApprovedAvailableDriverWithVehicle();
+        [$otherDriver] = $this->createApprovedAvailableDriverWithVehicle();
+        $booking = $this->createBooking(now()->addMonth()->toDateString());
+        $booking->update([
+            'status' => BookingStatus::CONFIRMED,
+            'payment_status' => PaymentStatus::PAID,
+        ]);
+        $offered = $this->createAssignment($booking, $owner, $vehicle);
+
+        Sanctum::actingAs($owner);
+        $this->patchJson("/api/v1/driver/assignments/{$offered->id}/start-trip")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('assignment');
+
+        Sanctum::actingAs($otherDriver);
+        $this->patchJson("/api/v1/driver/assignments/{$offered->id}/start-trip")
+            ->assertNotFound();
+
+        $this->assertSame(BookingStatus::CONFIRMED, $booking->fresh()->status);
+    }
+
     private function createApprovedAvailableDriverWithVehicle(): array
     {
         $driver = User::factory()->driver()->create();
