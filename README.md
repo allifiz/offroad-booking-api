@@ -40,6 +40,17 @@ Tambahan terbaru untuk sinkronisasi dengan Flutter mobile:
   - `PATCH /api/v1/driver/assignments/{driverAssignment}/start-trip`
   - `PATCH /api/v1/driver/assignments/{driverAssignment}/complete-trip`
 
+## Runtime notes
+
+- Driver push notification delivery uses the `notifications` queue.
+- Run a queue worker in environments that should deliver assignment notifications:
+
+```bash
+php artisan queue:work --queue=notifications,default --sleep=3 --tries=5 --timeout=30
+```
+
+- The mobile app must register the driver device token after login so assignment pushes can reach the assigned driver.
+
 ## FCM setup
 
 Tambahkan ke `.env`:

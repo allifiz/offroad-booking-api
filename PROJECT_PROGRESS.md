@@ -1,6 +1,6 @@
 # Offroad Booking — Project Progress Checkpoint
 
-Last updated: 2026-07-21 (Asia/Jakarta)  
+Last updated: 2026-07-24 (Asia/Jakarta)  
 Branch: `main`  
 Repository: `allifiz/offroad-booking-api`  
 Local path: `C:\Projects\offroad-booking-api`
@@ -25,9 +25,14 @@ Local path: `C:\Projects\offroad-booking-api`
 | Real database relationship continuity | Verified |
 | Point implementation | Technically passed |
 | Point product policy | Pending decision |
-| Flutter integration readiness | Ready to start |
+| Flutter integration readiness | In progress |
+| Driver push notification integration | Implemented |
 
 The backend feature-development phase is closed. Further backend work should be limited to verified defects, Flutter integration requirements, security hardening, infrastructure integration, or explicitly approved product changes.
+
+## Flutter integration note
+
+The driver app now registers FCM device tokens against the backend and receives assignment-offer push notifications through the queued notification flow. Assignment creation still persists the canonical Laravel `notifications` record, while push delivery is handled separately through FCM for the assigned driver only.
 
 ## Manual Postman E2E acceptance
 
@@ -110,6 +115,7 @@ Any agent working on assignment, booking completion, reward, point ledger, conve
 - Trip completion and idempotent driver rewards.
 - Point ledger, balance protection, and withdrawal lifecycle.
 - Concurrency-safe balance and booking operations.
+- Driver assignment push notifications through FCM for assigned drivers.
 
 ## Completed Admin Web scope
 

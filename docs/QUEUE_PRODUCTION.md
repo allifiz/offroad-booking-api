@@ -46,6 +46,8 @@ php artisan queue:work database \
 
 `DB_QUEUE_RETRY_AFTER` must remain greater than the worker timeout to avoid the same job being processed twice.
 
+This queue also carries operational assignment push delivery for the driver app, so worker availability directly affects assignment notification timeliness.
+
 ## Supervisor
 
 Copy the included config:

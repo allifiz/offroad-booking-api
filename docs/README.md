@@ -40,6 +40,12 @@ http://127.0.0.1:8081
 3. Pilih file `docs/openapi.yaml`.
 4. Postman akan membuat collection dari operasi yang terdokumentasi.
 
+## Catatan integrasi mobile
+
+- Endpoint driver assignment push token: `POST /driver/device-tokens` dan `DELETE /driver/device-tokens`.
+- Assignment offer untuk driver menggunakan notifikasi database Laravel dan push FCM untuk driver yang sama.
+- Pastikan queue worker berjalan untuk queue `notifications` agar push assignment terkirim.
+
 ## Aturan pemeliharaan
 
 - Setiap endpoint baru harus ditambahkan ke `docs/openapi.yaml`.
