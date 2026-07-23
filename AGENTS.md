@@ -75,6 +75,7 @@ When Figma and existing backend behavior differ, adapt the UI rather than modify
 
 - Customer authentication, profile, package discovery, bookings, participants, payments, travel groups, and notifications.
 - Driver onboarding, document verification, vehicles, assignment offers, participant allocation, trip lifecycle, rewards, point ledger, and withdrawals.
+- Driver assignment push notification delivery for the Flutter driver app via FCM and queued notifications.
 - Admin dashboard and full operational management for customers, packages, travel groups, bookings, payments, drivers, vehicles, withdrawals, reports, and audit logs.
 - Shared responsive Admin Web layout with desktop sidebar, mobile navigation, active route state, global flash messages, and validation errors.
 - Risk-based rate limiting, queued notifications, concurrency-safe booking and withdrawal operations, idempotent rewards, audit trails, CSV export, health checks, backup/deploy scripts, and automated CI.
@@ -137,6 +138,7 @@ When Figma and existing backend behavior differ, adapt the UI rather than modify
 - Treat `docs/openapi.yaml` as the canonical mobile API contract.
 - Use staging API environments for Flutter development; never point normal development builds at production data.
 - Store Sanctum tokens using secure device storage.
+- Driver apps now register device tokens against `/api/v1/driver/device-tokens` and receive assignment-offer push notifications through the queued `notifications` flow.
 - Handle revoked tokens, suspended/inactive users, validation errors, pagination, enum values, upload limits, offline failures, retries, and idempotent actions explicitly.
 - Prefer additive backend changes. Breaking response changes require API versioning or an agreed migration plan.
 - Keep customer and driver roles separated at navigation and authorization layers while sharing reusable networking, auth, error, and storage infrastructure.
